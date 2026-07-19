@@ -171,7 +171,7 @@ const CameraPage = () => {
               {/* Top texts */}
               <div style={{ position: 'absolute', top: 90, width: '100%', textAlign: 'center', zIndex: 10 }}>
                 <h2 className="text-2xl font-bold mb-2 text-white" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>인수증을 스캔하세요</h2>
-                <p style={{ color: 'rgba(255,255,255,0.95)', fontSize: '1.1rem', textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>글자가 잘 보이도록 밝은 곳에서 촬영해주세요</p>
+                <p style={{ color: 'rgba(255,255,255,0.95)', fontSize: '1.1rem', textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>글자가 잘 보이도록 밝은 곳에서 촬영하세요</p>
               </div>
 
               {/* Center Camera Icon (Watermark) */}
