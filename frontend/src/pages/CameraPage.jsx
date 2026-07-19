@@ -174,18 +174,6 @@ const CameraPage = () => {
                 <p style={{ color: 'rgba(255,255,255,0.95)', fontSize: '1.1rem', textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>글자가 잘 보이도록 밝은 곳에서 촬영하세요</p>
               </div>
 
-              {/* Center Camera Icon (Watermark) */}
-              <div style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                pointerEvents: 'none',
-                zIndex: 5
-              }}>
-                <Camera size={80} color="#fff" style={{ opacity: 0.4 }} />
-              </div>
-
               {/* Centered Capture Button at Bottom */}
               <div style={{ 
                 position: 'absolute', 
