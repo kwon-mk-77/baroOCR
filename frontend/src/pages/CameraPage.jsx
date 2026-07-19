@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Sparkles, Image as ImageIcon, Camera } from 'lucide-react';
 
 const CameraPage = () => {
   const navigate = useNavigate();
@@ -174,25 +174,16 @@ const CameraPage = () => {
                 <p style={{ color: 'rgba(255,255,255,0.95)', fontSize: '1.1rem', textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>글자가 잘 보이도록 밝은 곳에서 촬영해주세요</p>
               </div>
 
-              {/* Viewfinder Frame overlay */}
+              {/* Center Camera Icon (Watermark) */}
               <div style={{
                 position: 'absolute',
-                top: '48%',
+                top: '50%',
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
-                width: '85%',
-                height: '60%',
-                border: '2px solid rgba(255,255,255,0.4)',
-                borderRadius: '24px',
                 pointerEvents: 'none',
-                boxShadow: '0 0 0 4000px rgba(0,0,0,0.4)', // Dim outer area
                 zIndex: 5
               }}>
-                {/* Corner Accents */}
-                <div style={{ position: 'absolute', top: -2, left: -2, width: 40, height: 40, borderTop: '4px solid #fff', borderLeft: '4px solid #fff', borderTopLeftRadius: 24 }}></div>
-                <div style={{ position: 'absolute', top: -2, right: -2, width: 40, height: 40, borderTop: '4px solid #fff', borderRight: '4px solid #fff', borderTopRightRadius: 24 }}></div>
-                <div style={{ position: 'absolute', bottom: -2, left: -2, width: 40, height: 40, borderBottom: '4px solid #fff', borderLeft: '4px solid #fff', borderBottomLeftRadius: 24 }}></div>
-                <div style={{ position: 'absolute', bottom: -2, right: -2, width: 40, height: 40, borderBottom: '4px solid #fff', borderRight: '4px solid #fff', borderBottomRightRadius: 24 }}></div>
+                <Camera size={80} color="#fff" style={{ opacity: 0.4 }} />
               </div>
 
               {/* Centered Capture Button at Bottom */}
@@ -209,9 +200,9 @@ const CameraPage = () => {
                 {/* 갤러리 앨범 아이콘 (좌측에 배치) */}
                 <div 
                   onClick={() => fileInputRef.current?.click()}
-                  style={{ position: 'absolute', left: 30, width: 50, height: 50, borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.3)', backdropFilter: 'blur(4px)' }}
+                  style={{ position: 'absolute', left: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', opacity: 0.7 }}
                 >
-                  <ImageIcon size={22} color="#fff" />
+                  <ImageIcon size={32} color="#fff" />
                 </div>
 
                 {/* 중앙 캡처 촬영 버튼 */}
