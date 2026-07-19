@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import LandingPage from './pages/LandingPage';
 import IntroPage from './pages/IntroPage';
 import CameraPage from './pages/CameraPage';
 import EditPage from './pages/EditPage';
@@ -11,7 +12,8 @@ function App() {
     <BrowserRouter>
       <div className="app-container">
         <Routes>
-          <Route path="/" element={<IntroPage />} />
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/menu" element={<IntroPage />} />
           <Route path="/camera" element={<CameraPage />} />
           <Route path="/edit" element={<EditPage />} />
           <Route path="/list" element={<ListPage />} />

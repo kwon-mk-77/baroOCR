@@ -132,7 +132,7 @@ const ListPage = () => {
       {/* Header */}
       <div className="header" style={{ paddingBottom: 8 }}>
         <div className="flex items-center gap-4">
-          <ArrowLeft className="header-icon" size={24} onClick={() => navigate('/')} />
+          <ArrowLeft className="header-icon" size={24} onClick={() => navigate('/menu')} />
           <h1 className="text-xl font-bold">인수증 내역</h1>
         </div>
         <button className="btn btn-secondary" style={{ padding: '8px', borderRadius: '50%' }} onClick={fetchReceipts}>

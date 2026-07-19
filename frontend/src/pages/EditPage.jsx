@@ -39,7 +39,7 @@ const EditPage = () => {
   useEffect(() => {
     if (!imagePreview) {
       alert("이미지 정보가 없습니다. 처음부터 다시 시도해주세요.");
-      navigate('/');
+      navigate('/menu');
     }
     if (ocrData) {
       setFormData(prev => ({
@@ -96,8 +96,8 @@ const EditPage = () => {
       if (!response.ok) {
         throw new Error('Save failed');
       }
-      
-      navigate('/list');
+      alert('저장되었습니다!');
+      navigate('/menu');
     } catch (error) {
       alert('저장에 실패했습니다.');
     } finally {
