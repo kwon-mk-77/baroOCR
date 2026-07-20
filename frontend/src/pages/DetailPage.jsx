@@ -95,7 +95,7 @@ const DetailPage = () => {
                 <tr>
                   <td style={{ border: '1px solid #000', padding: '4mm', backgroundColor: '#f0f0f0', fontWeight: 'bold' }}>품목</td>
                   <td style={{ border: '1px solid #000', padding: '4mm' }}>{receipt.item}</td>
-                  <td style={{ border: '1px solid #000', padding: '4mm', backgroundColor: '#f0f0f0', fontWeight: 'bold' }}>거래처</td>
+                  <td style={{ border: '1px solid #000', padding: '4mm', backgroundColor: '#f0f0f0', fontWeight: 'bold' }}>공급업체</td>
                   <td style={{ border: '1px solid #000', padding: '4mm' }}>{receipt.vendor}</td>
                 </tr>
                 <tr>
@@ -139,7 +139,7 @@ const DetailPage = () => {
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '24px' }}>
             <div className="flex justify-between items-center border-b" style={{ borderColor: 'var(--border-color)', paddingBottom: '16px' }}>
-              <span className="text-secondary font-semibold">거래처</span>
+              <span className="text-secondary font-semibold">공급업체</span>
               <span className="text-black font-bold text-lg">{receipt.vendor}</span>
             </div>
             

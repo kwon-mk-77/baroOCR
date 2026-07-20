@@ -56,7 +56,7 @@ const EditPage = () => {
   const validate = () => {
     const newErrors = {};
     if (!formData.item.trim()) newErrors.item = "품목은 필수입니다.";
-    if (!formData.vendor.trim()) newErrors.vendor = "거래처는 필수입니다.";
+    if (!formData.vendor.trim()) newErrors.vendor = "공급업체는 필수입니다.";
     if (!formData.quantity.trim()) newErrors.quantity = "수량/중량은 필수입니다.";
     if (!formData.process) newErrors.process = "공정을 선택해주세요.";
     
@@ -163,7 +163,7 @@ const EditPage = () => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">거래처 <span className="text-primary">*</span></label>
+            <label className="form-label">공급업체 <span className="text-primary">*</span></label>
             <input 
               name="vendor"
               type="text" 

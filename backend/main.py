@@ -13,8 +13,11 @@ from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="BaroInsu MVP Backend")
 
-# Mount uploads dir
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# Mount uploads dir if exists, otherwise create it
+uploads_dir = os.path.join(os.path.dirname(__file__), "uploads")
+if not os.path.exists(uploads_dir):
+    os.makedirs(uploads_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 # Allow CORS for local React dev
 app.add_middleware(

@@ -18,7 +18,7 @@ async def process_receipt_image(file_bytes: bytes, filename: str, content_type: 
     이미지에서 다음 5가지 핵심 정보를 추출해서 JSON 형식으로만 반환해주세요.
     
     1. item: 품목명 (예: 철근, 시멘트, 레미콘 등)
-    2. vendor: 거래처명 (납품업체)
+    2. vendor: 공급업체명 (납품업체)
     3. spec: 규격 (있는 경우만, 없으면 빈 문자열)
     4. quantity: 수량 또는 중량 (숫자와 단위 포함)
     5. driver: 운반기사 이름 (있는 경우만, 없으면 빈 문자열)
@@ -26,7 +26,7 @@ async def process_receipt_image(file_bytes: bytes, filename: str, content_type: 
     응답은 반드시 아래와 같은 JSON 구조로만 작성하고, 마크다운 코드 블록(```json ... ```)이나 다른 설명 텍스트를 포함하지 마세요.
     {
       "item": "추출된 품목",
-      "vendor": "추출된 거래처",
+      "vendor": "추출된 공급업체",
       "spec": "추출된 규격",
       "quantity": "추출된 수량",
       "driver": "추출된 기사명"
