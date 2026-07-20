@@ -47,42 +47,87 @@ const CameraPage = () => {
     }
   };
 
+  const compressImage = (fileOrBlob) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const MAX_DIMENSION = 1920;
+        
+        if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIMENSION) / width);
+            width = MAX_DIMENSION;
+          } else {
+            width = Math.round((width * MAX_DIMENSION) / height);
+            height = MAX_DIMENSION;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob((blob) => {
+          const compressedFile = new File([blob], "image.jpg", { type: 'image/jpeg' });
+          resolve({ file: compressedFile, dataUrl: canvas.toDataURL('image/jpeg', 0.8) });
+        }, 'image/jpeg', 0.8);
+      };
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(fileOrBlob);
+    });
+  };
+
   const captureFromVideo = () => {
     if (!videoRef.current || !canvasRef.current) return;
     const video = videoRef.current;
     const canvas = canvasRef.current;
     
-    // Set canvas dimensions to match the actual video resolution
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    let width = video.videoWidth;
+    let height = video.videoHeight;
+    const MAX_DIMENSION = 1920;
+    
+    if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+      if (width > height) {
+        height = Math.round((height * MAX_DIMENSION) / width);
+        width = MAX_DIMENSION;
+      } else {
+        width = Math.round((width * MAX_DIMENSION) / height);
+        height = MAX_DIMENSION;
+      }
+    }
+    
+    canvas.width = width;
+    canvas.height = height;
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, 0, 0, width, height);
     
     canvas.toBlob((blob) => {
       if (blob) {
         const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
         setSelectedFile(file);
         
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setImagePreview(reader.result);
-          stopCamera();
-        };
-        reader.readAsDataURL(file);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        setImagePreview(dataUrl);
+        stopCamera();
       }
-    }, 'image/jpeg', 0.9);
+    }, 'image/jpeg', 0.8);
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      setSelectedFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-        stopCamera();
-      };
-      reader.readAsDataURL(file);
+      const { file: compressedFile, dataUrl } = await compressImage(file);
+      setSelectedFile(compressedFile);
+      setImagePreview(dataUrl);
+      stopCamera();
     }
   };
 
