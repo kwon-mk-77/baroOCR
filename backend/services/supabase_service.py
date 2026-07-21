@@ -107,15 +107,25 @@ def delete_receipt(receipt_id: str):
 
 def upload_image(file_bytes: bytes, filename: str, content_type: str, request=None):
     if not supabase:
-        # Save to local uploads directory
-        unique_filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
-        filepath = os.path.join(os.path.dirname(__file__), '..', 'uploads', unique_filename)
-        with open(filepath, 'wb') as f:
-            f.write(file_bytes)
-            
-        if request:
-            return str(request.url_for('uploads', path=unique_filename))
-        return f"/uploads/{unique_filename}"
+        # Try to save to local uploads directory (works on local dev)
+        try:
+            unique_filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
+            uploads_dir = os.path.join(os.path.dirname(__file__), '..', 'uploads')
+            if not os.path.exists(uploads_dir):
+                os.makedirs(uploads_dir, exist_ok=True)
+            filepath = os.path.join(uploads_dir, unique_filename)
+            with open(filepath, 'wb') as f:
+                f.write(file_bytes)
+                
+            if request:
+                return str(request.url_for('uploads', path=unique_filename))
+            return f"/uploads/{unique_filename}"
+        except Exception:
+            # Fallback to base64 Data URL if filesystem is read-only (e.g., Vercel without Supabase env vars)
+            import base64
+            b64_str = base64.b64encode(file_bytes).decode('utf-8')
+            mime = content_type or "image/jpeg"
+            return f"data:{mime};base64,{b64_str}"
         
     unique_filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
     

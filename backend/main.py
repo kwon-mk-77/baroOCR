@@ -1,9 +1,13 @@
+import sys
+import os
+
+# Ensure backend directory is in sys.path for Vercel module resolution
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 from dotenv import load_dotenv
-
-import os
 # Load env vars from .env file (one level up)
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
 
