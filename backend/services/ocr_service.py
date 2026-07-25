@@ -62,7 +62,7 @@ async def process_receipt_image(file_bytes: bytes, filename: str, content_type: 
     2. vendor: 공급업체명 (납품업체)
     3. spec: 규격 (있는 경우만, 없으면 빈 문자열)
     4. quantity: 수량 또는 중량 (숫자와 단위 포함)
-    5. driver: 운반기사 이름 (있는 경우만, 없으면 빈 문자열)
+    5. driver: 인수자 이름 (있는 경우만, 없으면 빈 문자열)
     
     응답은 반드시 아래와 같은 JSON 구조로만 작성하고, 마크다운 코드 블록(```json ... ```)이나 다른 설명 텍스트를 포함하지 마세요.
     {{

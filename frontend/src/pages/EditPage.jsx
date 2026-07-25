@@ -198,7 +198,7 @@ const EditPage = () => {
           </div>
 
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">운반기사</label>
+            <label className="form-label">인수자</label>
             <input 
               name="driver"
               type="text" 
