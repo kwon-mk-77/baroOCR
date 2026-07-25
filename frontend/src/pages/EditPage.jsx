@@ -72,6 +72,21 @@ const EditPage = () => {
     }
   };
 
+  const getFieldStyle = (value) => {
+    const isString = typeof value === 'string';
+    const isEmpty = !value || (isString && value.trim() === "");
+    if (isEmpty) {
+      return {
+        backgroundColor: 'rgba(249, 115, 22, 0.05)',
+        borderColor: 'rgba(249, 115, 22, 0.3)',
+        transition: 'all 0.2s ease-in-out'
+      };
+    }
+    return {
+      transition: 'all 0.2s ease-in-out'
+    };
+  };
+
   const handleSave = async () => {
     if (!validate()) return;
     
@@ -140,6 +155,7 @@ const EditPage = () => {
               className={`form-select ${errors.process ? 'error' : ''}`}
               value={formData.process}
               onChange={handleChange}
+              style={getFieldStyle(formData.process)}
             >
               <option value="">선택해주세요</option>
               {PROCESS_OPTIONS.map(opt => (
@@ -158,6 +174,7 @@ const EditPage = () => {
               value={formData.item}
               onChange={handleChange}
               placeholder="예: 철근"
+              style={getFieldStyle(formData.item)}
             />
             {errors.item && <p className="form-error">{errors.item}</p>}
           </div>
@@ -170,6 +187,7 @@ const EditPage = () => {
               className={`form-input ${errors.vendor ? 'error' : ''}`}
               value={formData.vendor}
               onChange={handleChange}
+              style={getFieldStyle(formData.vendor)}
             />
             {errors.vendor && <p className="form-error">{errors.vendor}</p>}
           </div>
@@ -182,6 +200,7 @@ const EditPage = () => {
               className="form-input"
               value={formData.spec}
               onChange={handleChange}
+              style={getFieldStyle(formData.spec)}
             />
           </div>
 
@@ -193,6 +212,7 @@ const EditPage = () => {
               className={`form-input ${errors.quantity ? 'error' : ''}`}
               value={formData.quantity}
               onChange={handleChange}
+              style={getFieldStyle(formData.quantity)}
             />
             {errors.quantity && <p className="form-error">{errors.quantity}</p>}
           </div>
@@ -205,6 +225,7 @@ const EditPage = () => {
               className="form-input"
               value={formData.driver}
               onChange={handleChange}
+              style={getFieldStyle(formData.driver)}
             />
           </div>
         </div>
