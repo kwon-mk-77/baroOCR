@@ -72,7 +72,7 @@ async def process_receipt_image(file_bytes: bytes, filename: str, content_type: 
             """
             
             response = await client.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=300,
                 temperature=0.0
