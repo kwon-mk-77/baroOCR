@@ -86,6 +86,8 @@ async def process_receipt_image(file_bytes: bytes, filename: str, content_type: 
             parsed_data = json.loads(result_text)
             default_data = {"item": "", "vendor": "", "spec": "", "quantity": "", "driver": ""}
             default_data.update(parsed_data)
+            default_data["debug_extracted_text"] = document_text
+            default_data["debug_raw_solar_response"] = result_text
             return default_data
             
         except Exception as e:
