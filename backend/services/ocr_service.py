@@ -17,9 +17,10 @@ async def process_receipt_image(file_bytes: bytes, filename: str, content_type: 
             upstage_url = "https://api.upstage.ai/v1/document-ai/document-parse"
             headers = {"Authorization": f"Bearer {upstage_api_key}"}
             files = {"document": (filename, file_bytes, content_type)}
+            data = {"ocr": "force"}
             
             async with httpx.AsyncClient(timeout=30.0) as http_client:
-                resp = await http_client.post(upstage_url, headers=headers, files=files)
+                resp = await http_client.post(upstage_url, headers=headers, files=files, data=data)
                 
             if resp.status_code != 200:
                 raise Exception(f"Upstage API error ({resp.status_code}): {resp.text}")
@@ -86,8 +87,6 @@ async def process_receipt_image(file_bytes: bytes, filename: str, content_type: 
             parsed_data = json.loads(result_text)
             default_data = {"item": "", "vendor": "", "spec": "", "quantity": "", "driver": ""}
             default_data.update(parsed_data)
-            default_data["debug_extracted_text"] = document_text
-            default_data["debug_raw_solar_response"] = result_text
             return default_data
             
         except Exception as e:

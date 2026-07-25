@@ -12,27 +12,6 @@ const CameraPage = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState(false);
-  const [loadingStep, setLoadingStep] = useState(0);
-
-  const loadingMessages = [
-    "이미지 고화질 전처리 중...",
-    "Upstage 레이아웃 엔진 분석 중...",
-    "문서 내 텍스트 및 표 구조 추출 중...",
-    "Solar Pro AI 핵심 자재 정보 매핑 중...",
-    "인수증 데이터 변환 완료 단계..."
-  ];
-
-  useEffect(() => {
-    let interval;
-    if (loading) {
-      interval = setInterval(() => {
-        setLoadingStep((prev) => (prev + 1) % 5);
-      }, 1500);
-    } else {
-      setLoadingStep(0);
-    }
-    return () => clearInterval(interval);
-  }, [loading]);
 
   useEffect(() => {
     startCamera();
@@ -290,23 +269,6 @@ const CameraPage = () => {
             }} />
           </div>
 
-          {/* Loading step indicator */}
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-            {loadingMessages.map((_, idx) => (
-              <div 
-                key={idx} 
-                style={{ 
-                  width: '12px', 
-                  height: '12px', 
-                  borderRadius: '50%', 
-                  backgroundColor: idx === loadingStep ? '#3b82f6' : 'rgba(255,255,255,0.15)',
-                  boxShadow: idx === loadingStep ? '0 0 10px #3b82f6' : 'none',
-                  transition: 'all 0.3s ease'
-                }} 
-              />
-            ))}
-          </div>
-
           {/* Title and message */}
           <h3 style={{ fontSize: '1.4rem', fontWeight: 'bold', letterSpacing: '-0.025em', marginBottom: '12px', color: '#fff' }}>
             AI 문서 분석 중
@@ -319,7 +281,7 @@ const CameraPage = () => {
             minHeight: '24px',
             fontWeight: '500'
           }}>
-            {loadingMessages[loadingStep]}
+            AI가 인수증을 읽는 중입니다...
           </p>
         </div>
       )}
