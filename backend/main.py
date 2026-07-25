@@ -51,12 +51,15 @@ async def ocr_endpoint(image: UploadFile = File(...)):
     except Exception as e:
         print(f"OCR Error: {e}")
         # In MVP, if OCR fails (e.g. no API key), return a mock to allow flow to continue
+        import traceback
+        tb = traceback.format_exc()
         return {
-            "item": "수동입력(OCR오류)",
+            "item": f"수동입력(OCR오류: {str(e)})",
             "vendor": "",
             "spec": "",
             "quantity": "",
-            "driver": ""
+            "driver": "",
+            "debug_trace": tb
         }
 
 @app.post("/api/receipts")
