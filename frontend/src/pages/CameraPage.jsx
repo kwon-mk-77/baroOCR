@@ -12,6 +12,27 @@ const CameraPage = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
+
+  const loadingMessages = [
+    "이미지 고화질 전처리 중...",
+    "Upstage 레이아웃 엔진 분석 중...",
+    "문서 내 텍스트 및 표 구조 추출 중...",
+    "Solar Pro AI 핵심 자재 정보 매핑 중...",
+    "인수증 데이터 변환 완료 단계..."
+  ];
+
+  useEffect(() => {
+    let interval;
+    if (loading) {
+      interval = setInterval(() => {
+        setLoadingStep((prev) => (prev + 1) % 5);
+      }, 1500);
+    } else {
+      setLoadingStep(0);
+    }
+    return () => clearInterval(interval);
+  }, [loading]);
 
   useEffect(() => {
     startCamera();
@@ -173,9 +194,133 @@ const CameraPage = () => {
   return (
     <div className="page" style={{ padding: 0, backgroundColor: '#000', color: '#fff', height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {loading && (
-        <div className="loading-overlay" style={{ backgroundColor: 'rgba(0,0,0,0.8)', color: '#fff', zIndex: 100 }}>
-          <Sparkles size={48} className="mb-4 text-primary" style={{ animation: 'pulse 2s infinite' }} />
-          <p className="font-bold text-xl text-white">AI가 문서를 읽는 중...</p>
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'radial-gradient(circle at center, #1e1b4b 0%, #09090b 100%)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          color: '#fff',
+          padding: '24px'
+        }}>
+          {/* Custom style for keyframes */}
+          <style>{`
+            @keyframes scan {
+              0% { top: 0%; opacity: 0.3; }
+              50% { top: 100%; opacity: 1; }
+              100% { top: 0%; opacity: 0.3; }
+            }
+            @keyframes pulse-glow {
+              0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.4)); }
+              50% { transform: scale(1.05); filter: drop-shadow(0 0 30px rgba(59, 130, 246, 0.8)); }
+            }
+            @keyframes spin-circle {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+            @keyframes fade-in-out {
+              0%, 100% { opacity: 0.6; }
+              50% { opacity: 1; }
+            }
+          `}</style>
+
+          {/* Futuristic Scanning UI Container */}
+          <div style={{ position: 'relative', width: '200px', height: '240px', marginBottom: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            
+            {/* Glowing Holographic Receipt Outline */}
+            <div style={{
+              width: '140px',
+              height: '190px',
+              border: '2px solid rgba(59, 130, 246, 0.4)',
+              borderRadius: '12px',
+              backgroundColor: 'rgba(59, 130, 246, 0.05)',
+              position: 'relative',
+              overflow: 'hidden',
+              animation: 'pulse-glow 3s infinite ease-in-out',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              padding: '16px'
+            }}>
+              {/* Dummy receipt lines for effect */}
+              <div style={{ height: '4px', backgroundColor: 'rgba(59, 130, 246, 0.3)', width: '60%', borderRadius: '2px' }} />
+              <div style={{ height: '4px', backgroundColor: 'rgba(59, 130, 246, 0.2)', width: '80%', borderRadius: '2px' }} />
+              <div style={{ height: '4px', backgroundColor: 'rgba(59, 130, 246, 0.2)', width: '40%', borderRadius: '2px' }} />
+              <div style={{ height: '4px', backgroundColor: 'rgba(59, 130, 246, 0.3)', width: '90%', borderRadius: '2px' }} />
+              <div style={{ height: '4px', backgroundColor: 'rgba(59, 130, 246, 0.2)', width: '70%', borderRadius: '2px' }} />
+              
+              {/* Vertical Laser Scanner Beam */}
+              <div style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                height: '3px',
+                background: 'linear-gradient(to right, transparent, #3b82f6, #60a5fa, #3b82f6, transparent)',
+                boxShadow: '0 0 12px 3px rgba(59, 130, 246, 0.8)',
+                animation: 'scan 2.5s infinite linear'
+              }} />
+            </div>
+
+            {/* Orbit HUD Ring */}
+            <div style={{
+              position: 'absolute',
+              width: '200px',
+              height: '200px',
+              border: '2px dashed rgba(96, 165, 250, 0.2)',
+              borderRadius: '50%',
+              animation: 'spin-circle 20s infinite linear'
+            }} />
+            
+            {/* Inner HUD Ring */}
+            <div style={{
+              position: 'absolute',
+              width: '170px',
+              height: '170px',
+              border: '2px dashed rgba(59, 130, 246, 0.3)',
+              borderTopColor: 'transparent',
+              borderBottomColor: 'transparent',
+              borderRadius: '50%',
+              animation: 'spin-circle 8s infinite linear reverse'
+            }} />
+          </div>
+
+          {/* Loading step indicator */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+            {loadingMessages.map((_, idx) => (
+              <div 
+                key={idx} 
+                style={{ 
+                  width: '12px', 
+                  height: '12px', 
+                  borderRadius: '50%', 
+                  backgroundColor: idx === loadingStep ? '#3b82f6' : 'rgba(255,255,255,0.15)',
+                  boxShadow: idx === loadingStep ? '0 0 10px #3b82f6' : 'none',
+                  transition: 'all 0.3s ease'
+                }} 
+              />
+            ))}
+          </div>
+
+          {/* Title and message */}
+          <h3 style={{ fontSize: '1.4rem', fontWeight: 'bold', letterSpacing: '-0.025em', marginBottom: '12px', color: '#fff' }}>
+            AI 문서 분석 중
+          </h3>
+          <p style={{ 
+            fontSize: '1.05rem', 
+            color: 'rgba(255, 255, 255, 0.75)', 
+            animation: 'fade-in-out 1.5s infinite ease-in-out',
+            textAlign: 'center',
+            minHeight: '24px',
+            fontWeight: '500'
+          }}>
+            {loadingMessages[loadingStep]}
+          </p>
         </div>
       )}
 
