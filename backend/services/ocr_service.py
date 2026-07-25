@@ -61,8 +61,9 @@ async def process_receipt_image(file_bytes: bytes, filename: str, content_type: 
     1. item: 품목명 (예: 철근, 시멘트, 레미콘 등)
     2. vendor: 공급업체명 (납품업체)
     3. spec: 규격 (있는 경우만, 없으면 빈 문자열)
-    4. quantity: 수량 또는 중량 (숫자와 단위 포함)
-    5. driver: 인수자 이름 (있는 경우만, 없으면 빈 문자열)
+    4. quantity: 수량 (숫자와 단위 포함, 예: 150포, 6대 등. 없으면 빈 문자열)
+    5. weight: 중량 (숫자와 단위 포함, 예: 3ton, 5톤 등. 없으면 빈 문자열)
+    6. driver: 인수자 이름 (있는 경우만, 없으면 빈 문자열)
     
     응답은 반드시 아래와 같은 JSON 구조로만 작성하고, 마크다운 코드 블록(```json ... ```)이나 다른 설명 텍스트를 포함하지 마세요.
     {{
@@ -70,6 +71,7 @@ async def process_receipt_image(file_bytes: bytes, filename: str, content_type: 
       "vendor": "추출된 공급업체",
       "spec": "추출된 규격",
       "quantity": "추출된 수량",
+      "weight": "추출된 중량",
       "driver": "추출된 기사명"
     }}
     
@@ -91,6 +93,6 @@ async def process_receipt_image(file_bytes: bytes, filename: str, content_type: 
         result_text = result_text.replace("```", "").strip()
         
     parsed_data = json.loads(result_text)
-    default_data = {"item": "", "vendor": "", "spec": "", "quantity": "", "driver": ""}
+    default_data = {"item": "", "vendor": "", "spec": "", "quantity": "", "weight": "", "driver": ""}
     default_data.update(parsed_data)
     return default_data

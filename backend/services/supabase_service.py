@@ -30,6 +30,7 @@ def save_receipt(data: dict, image_url: str):
                 "vendor": data.get("vendor", ""),
                 "spec": data.get("spec", ""),
                 "quantity": data.get("quantity", ""),
+                "weight": data.get("weight", ""),
                 "driver": data.get("driver", ""),
                 "process": data.get("process", ""),
                 "imageUrl": image_url
@@ -48,6 +49,7 @@ def save_receipt(data: dict, image_url: str):
         "vendor": data.get("vendor", ""),
         "spec": data.get("spec", ""),
         "quantity": data.get("quantity", ""),
+        "weight": data.get("weight", ""),
         "driver": data.get("driver", ""),
         "process": data.get("process", ""),
         "imageUrl": image_url,

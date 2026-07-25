@@ -29,6 +29,7 @@ const EditPage = () => {
     vendor: '',
     spec: '',
     quantity: '',
+    weight: '',
     driver: '',
     process: ''
   });
@@ -48,6 +49,7 @@ const EditPage = () => {
         vendor: ocrData.vendor || '',
         spec: ocrData.spec || '',
         quantity: ocrData.quantity || '',
+        weight: ocrData.weight || '',
         driver: ocrData.driver || ''
       }));
     }
@@ -77,8 +79,8 @@ const EditPage = () => {
     const isEmpty = !value || (isString && value.trim() === "");
     if (isEmpty) {
       return {
-        backgroundColor: 'rgba(249, 115, 22, 0.05)',
-        borderColor: 'rgba(249, 115, 22, 0.3)',
+        backgroundColor: 'rgba(249, 115, 22, 0.3)',
+        borderColor: 'rgba(249, 115, 22, 0.5)',
         transition: 'all 0.2s ease-in-out'
       };
     }
@@ -100,6 +102,7 @@ const EditPage = () => {
       submitData.append('vendor', formData.vendor);
       submitData.append('spec', formData.spec);
       submitData.append('quantity', formData.quantity);
+      submitData.append('weight', formData.weight);
       submitData.append('driver', formData.driver);
       submitData.append('process', formData.process);
 
@@ -204,17 +207,31 @@ const EditPage = () => {
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">수량/중량 <span className="text-primary">*</span></label>
-            <input 
-              name="quantity"
-              type="text" 
-              className={`form-input ${errors.quantity ? 'error' : ''}`}
-              value={formData.quantity}
-              onChange={handleChange}
-              style={getFieldStyle(formData.quantity)}
-            />
-            {errors.quantity && <p className="form-error">{errors.quantity}</p>}
+          <div className="flex gap-3 mb-4">
+            <div style={{ flex: 1 }}>
+              <label className="form-label">수량 <span className="text-primary">*</span></label>
+              <input 
+                name="quantity"
+                type="text" 
+                className={`form-input ${errors.quantity ? 'error' : ''}`}
+                value={formData.quantity}
+                onChange={handleChange}
+                style={getFieldStyle(formData.quantity)}
+              />
+              {errors.quantity && <p className="form-error" style={{ marginTop: '4px' }}>{errors.quantity}</p>}
+            </div>
+            
+            <div style={{ flex: 1 }}>
+              <label className="form-label">중량</label>
+              <input 
+                name="weight"
+                type="text" 
+                className="form-input"
+                value={formData.weight}
+                onChange={handleChange}
+                style={getFieldStyle(formData.weight)}
+              />
+            </div>
           </div>
 
           <div className="form-group" style={{ marginBottom: 0 }}>

@@ -238,7 +238,10 @@ const ListPage = () => {
                     
                     {/* Right Side */}
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-xl text-black">{receipt.quantity || '-'}</span>
+                      <span className="font-bold text-xl text-black">
+                        {receipt.quantity || '-'}
+                        {receipt.weight ? ` / ${receipt.weight}` : ''}
+                      </span>
                       <button 
                         style={{ padding: '6px', border: 'none', backgroundColor: 'transparent', color: '#9CA3AF', cursor: 'pointer' }}
                         onClick={(e) => handleDelete(receipt.id, e)}

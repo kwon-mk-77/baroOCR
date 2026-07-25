@@ -101,12 +101,14 @@ const DetailPage = () => {
                 <tr>
                   <td style={{ border: '1px solid #000', padding: '4mm', backgroundColor: '#f0f0f0', fontWeight: 'bold' }}>규격</td>
                   <td style={{ border: '1px solid #000', padding: '4mm' }}>{receipt.spec || '-'}</td>
-                  <td style={{ border: '1px solid #000', padding: '4mm', backgroundColor: '#f0f0f0', fontWeight: 'bold' }}>수량/중량</td>
-                  <td style={{ border: '1px solid #000', padding: '4mm' }}>{receipt.quantity}</td>
+                  <td style={{ border: '1px solid #000', padding: '4mm', backgroundColor: '#f0f0f0', fontWeight: 'bold' }}>수량</td>
+                  <td style={{ border: '1px solid #000', padding: '4mm' }}>{receipt.quantity || '-'}</td>
                 </tr>
                 <tr>
+                  <td style={{ border: '1px solid #000', padding: '4mm', backgroundColor: '#f0f0f0', fontWeight: 'bold' }}>중량</td>
+                  <td style={{ border: '1px solid #000', padding: '4mm' }}>{receipt.weight || '-'}</td>
                   <td style={{ border: '1px solid #000', padding: '4mm', backgroundColor: '#f0f0f0', fontWeight: 'bold' }}>인수자</td>
-                  <td style={{ border: '1px solid #000', padding: '4mm' }} colSpan="3">{receipt.driver || '-'}</td>
+                  <td style={{ border: '1px solid #000', padding: '4mm' }}>{receipt.driver || '-'}</td>
                 </tr>
               </tbody>
             </table>
@@ -144,8 +146,13 @@ const DetailPage = () => {
             </div>
             
             <div className="flex justify-between items-center border-b" style={{ borderColor: 'var(--border-color)', paddingBottom: '16px' }}>
-              <span className="text-secondary font-semibold">수량/중량</span>
-              <span className="text-primary font-bold text-lg">{receipt.quantity}</span>
+              <span className="text-secondary font-semibold">수량</span>
+              <span className="text-primary font-bold text-lg">{receipt.quantity || '-'}</span>
+            </div>
+            
+            <div className="flex justify-between items-center border-b" style={{ borderColor: 'var(--border-color)', paddingBottom: '16px' }}>
+              <span className="text-secondary font-semibold">중량</span>
+              <span className="text-black font-semibold text-lg">{receipt.weight || '-'}</span>
             </div>
             
             <div className="flex justify-between items-center border-b" style={{ borderColor: 'var(--border-color)', paddingBottom: '16px' }}>

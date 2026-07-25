@@ -58,6 +58,7 @@ async def ocr_endpoint(image: UploadFile = File(...)):
             "vendor": "",
             "spec": "",
             "quantity": "",
+            "weight": "",
             "driver": "",
             "debug_trace": tb
         }
@@ -69,6 +70,7 @@ async def create_receipt(
     quantity: str = Form(...),
     process: str = Form(...),
     spec: Optional[str] = Form(""),
+    weight: Optional[str] = Form(""),
     driver: Optional[str] = Form(""),
     image: UploadFile = File(...),
     request: Request = None
@@ -78,12 +80,13 @@ async def create_receipt(
         contents = await image.read()
         image_url = upload_image(contents, image.filename, image.content_type, request=request)
         
-        # 2. Save data to Firestore
+        # 2. Save data to Firestore/Supabase
         data = {
             "item": item,
             "vendor": vendor,
             "spec": spec,
             "quantity": quantity,
+            "weight": weight,
             "driver": driver,
             "process": process
         }
