@@ -8,10 +8,7 @@ async def process_receipt_image(file_bytes: bytes, filename: str, content_type: 
     openai_api_key = os.environ.get("OPENAI_API_KEY")
     upstage_api_key = os.environ.get("UPSTAGE_API_KEY")
     
-    if not openai_api_key:
-        raise Exception("OPENAI_API_KEY is not set in environment.")
-        
-    client = AsyncOpenAI(api_key=openai_api_key)
+    # We will check keys dynamically in each path
     
     # 1. Check if Upstage API Key is configured for high-accuracy Document Parse
     if upstage_api_key:
@@ -47,7 +44,9 @@ async def process_receipt_image(file_bytes: bytes, filename: str, content_type: 
             document_text = "\n\n".join(parsed_parts)
             print(f"Upstage parsing completed. Extracted length: {len(document_text)}")
             
-            # Use OpenAI Chat Completions to align parsed layout text to JSON schema
+            # Use Upstage Solar Pro (OpenAI-compatible) to align parsed layout text to JSON schema
+            solar_client = AsyncOpenAI(api_key=upstage_api_key, base_url="https://api.upstage.ai/v1")
+            
             prompt = f"""
             건설현장 자재 인수증(영수증)에서 추출된 문서 레이아웃 텍스트(마크다운/HTML 포함)입니다.
             이 텍스트에서 다음 5가지 핵심 정보를 추출해서 JSON 형식으로만 반환해주세요.
@@ -71,8 +70,8 @@ async def process_receipt_image(file_bytes: bytes, filename: str, content_type: 
             {document_text}
             """
             
-            response = await client.chat.completions.create(
-                model="gpt-4o-mini",
+            response = await solar_client.chat.completions.create(
+                model="solar-pro",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=300,
                 temperature=0.0
@@ -95,6 +94,10 @@ async def process_receipt_image(file_bytes: bytes, filename: str, content_type: 
             
     # 2. Fallback / Legacy path: OpenAI Vision directly
     print("Using OpenAI Vision API (Legacy/Fallback mode)...")
+    if not openai_api_key:
+        raise Exception("OPENAI_API_KEY is not set in environment (cannot fallback).")
+        
+    client = AsyncOpenAI(api_key=openai_api_key)
     base64_image = base64.b64encode(file_bytes).decode('utf-8')
     
     prompt = """
