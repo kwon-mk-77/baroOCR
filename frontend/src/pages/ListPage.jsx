@@ -188,13 +188,13 @@ const ListPage = () => {
         )}
 
         {filterType === '일자별' && (
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-2 items-center" style={{ width: '100%' }}>
             <input 
               type="date" 
               className="form-input" 
               value={filterDateFrom}
               onChange={(e) => setFilterDateFrom(e.target.value)}
-              style={{ padding: '12px' }}
+              style={{ padding: '12px', flex: 1, minWidth: 0, border: '1px solid #E5E7EB', backgroundColor: '#ffffff' }}
             />
             <span className="text-secondary font-bold">~</span>
             <input 
@@ -202,7 +202,7 @@ const ListPage = () => {
               className="form-input" 
               value={filterDateTo}
               onChange={(e) => setFilterDateTo(e.target.value)}
-              style={{ padding: '12px' }}
+              style={{ padding: '12px', flex: 1, minWidth: 0, border: '1px solid #E5E7EB', backgroundColor: '#ffffff' }}
             />
           </div>
         )}
