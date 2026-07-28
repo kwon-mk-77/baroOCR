@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { LogIn, UserPlus, Key, Mail, ShieldCheck } from 'lucide-react';
@@ -12,8 +12,18 @@ const LoginPage = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
+  useEffect(() => {
+    if (!supabase) {
+      setErrorMsg('Vercel 대시보드 환경변수(VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY) 설정이 누락되어 있습니다. Vercel 설정에 이를 추가해야 로그인이 가능합니다.');
+    }
+  }, []);
+
   const handleAuth = async (e) => {
     e.preventDefault();
+    if (!supabase) {
+      setErrorMsg('Supabase 설정(VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)이 Vercel 환경 변수에 설정되지 않았습니다. Vercel 대시보드에서 환경 변수를 등록해 주세요.');
+      return;
+    }
     if (!email || !password) {
       setErrorMsg('이메일과 비밀번호를 모두 입력해 주세요.');
       return;

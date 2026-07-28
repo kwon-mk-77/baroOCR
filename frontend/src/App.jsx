@@ -15,6 +15,11 @@ const ProtectedRoute = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
     // 초기 세션 획득
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
