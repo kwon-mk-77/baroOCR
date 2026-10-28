@@ -1,9 +1,13 @@
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
 :root {
-  --primary: #3182F6;
-  --primary-hover: #1B64DA;
-  --primary-soft: #E8F3FF;
+  /* 바로인수 브랜드 오렌지 (baroinsu.vercel.app --brand-orange) */
+  --primary: #FF5A1F;
+  --primary-hover: #E64A12;
+  --primary-soft: #FFF1EA;
+  --primary-strong: #B23A0C;   /* 연한 배경 위 강조 텍스트 */
+  --primary-line: #FFC9B3;
+  --brand-dark: #1B1C1F;
   --bg: #F2F4F6;
   --surface: #FFFFFF;
   --surface-2: #F9FAFB;
@@ -71,7 +75,12 @@ ul { list-style: none; }
 }
 .header-left, .header-right { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .header-title { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.4px; white-space: nowrap; }
-.brand { font-size: 1.5rem; font-weight: 800; color: var(--primary); letter-spacing: -0.8px; }
+/* 홈페이지 로고와 같은 '바로인수■' 형태 */
+.brand { font-size: 1.5rem; font-weight: 800; color: var(--text); letter-spacing: -0.8px; }
+.brand::after, .landing-hero h1::after {
+  content: ''; display: inline-block; width: 0.3em; height: 0.3em; margin-left: 0.08em;
+  background: var(--primary); vertical-align: 0.05em;
+}
 
 .icon-btn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -108,7 +117,7 @@ ul { list-style: none; }
   width: 56px; height: 56px; margin-top: -22px; border-radius: var(--r-full);
   display: flex; align-items: center; justify-content: center;
   background: var(--primary); color: #fff;
-  box-shadow: 0 6px 16px rgba(49, 130, 246, 0.4); border: 4px solid var(--surface);
+  box-shadow: 0 6px 16px rgba(255, 90, 31, 0.35); border: 4px solid var(--surface);
   transition: transform 0.15s;
 }
 .bottom-nav-center:active .bottom-nav-center-btn { transform: scale(0.94); }
@@ -134,7 +143,7 @@ ul { list-style: none; }
 .btn-danger { background: var(--danger); color: #fff; }
 .btn-dark { background: var(--text); color: #fff; }
 .btn-white { background: #fff; color: var(--primary); }
-.btn-outline { background: var(--surface); color: var(--primary); border: 1.5px dashed #B3D4FF; }
+.btn-outline { background: var(--surface); color: var(--primary); border: 1.5px dashed var(--primary-line); }
 .btn-glass { background: rgba(255, 255, 255, 0.18); color: #fff; border: 1px solid rgba(255, 255, 255, 0.3); backdrop-filter: blur(10px); }
 .btn-ghost-light { color: rgba(255, 255, 255, 0.85); }
 .btn-block { width: 100%; }
@@ -238,7 +247,7 @@ ul { list-style: none; }
 }
 .notice { display: flex; gap: 10px; align-items: flex-start; padding: 14px 16px; border-radius: var(--r-md); font-size: 0.92rem; line-height: 1.5; }
 .notice svg { flex-shrink: 0; margin-top: 2px; }
-.notice-info { background: var(--primary-soft); color: #1B4D99; }
+.notice-info { background: var(--primary-soft); color: var(--primary-strong); }
 .notice-warn { background: var(--warn-soft); color: #8A5A00; }
 .mark { background: #FFE8A3; padding: 0 4px; border-radius: 4px; font-weight: 600; }
 
@@ -372,13 +381,16 @@ textarea.input { resize: vertical; min-height: 64px; }
 .text-tertiary { color: var(--text-4); }
 
 /* ---------- 랜딩 ---------- */
-.landing { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; background: var(--primary); color: #fff; padding: 0 20px; }
+.landing {
+  min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; color: #fff; padding: 0 20px;
+  background: radial-gradient(120% 60% at 50% 0%, rgba(255, 90, 31, 0.22) 0%, transparent 60%), var(--brand-dark);
+}
 .landing-hero { flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: center; padding-top: 40px; }
 .landing-hero h1 { font-size: 3rem; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 18px; }
 .landing-hero p { font-size: 1.25rem; line-height: 1.5; font-weight: 500; opacity: 0.95; }
 .landing-features { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
-.landing-features li { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: var(--r-md); background: rgba(255, 255, 255, 0.12); }
-.landing-feature-icon { width: 42px; height: 42px; border-radius: 12px; background: rgba(255, 255, 255, 0.2); display: flex; align-items: center; justify-content: center; }
+.landing-features li { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: var(--r-md); background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.08); }
+.landing-feature-icon { width: 42px; height: 42px; border-radius: 12px; background: rgba(255, 90, 31, 0.16); color: #FF8A5C; display: flex; align-items: center; justify-content: center; }
 .landing-feature-title { font-weight: 700; }
 .landing-feature-desc { font-size: 0.88rem; opacity: 0.85; margin-top: 2px; }
 .landing-cta { padding-bottom: calc(28px + var(--safe-bottom)); }
@@ -443,7 +455,7 @@ textarea.input { resize: vertical; min-height: 64px; }
 .scan-overlay {
   position: fixed; inset: 0; z-index: 999; padding: 24px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
-  background: radial-gradient(circle at center, #1E1B4B 0%, #09090B 100%);
+  background: radial-gradient(circle at center, #3A2216 0%, #0B0B0C 100%);
 }
 .scan-overlay h3 { font-size: 1.35rem; font-weight: 700; margin-bottom: 10px; }
 .scan-overlay p { color: rgba(255, 255, 255, 0.75); animation: pulseText 1.6s infinite ease-in-out; }
@@ -451,15 +463,15 @@ textarea.input { resize: vertical; min-height: 64px; }
 .scan-paper {
   position: relative; width: 140px; height: 186px; padding: 18px; overflow: hidden;
   display: flex; flex-direction: column; justify-content: space-between;
-  border: 2px solid rgba(59, 130, 246, 0.45); border-radius: 12px; background: rgba(59, 130, 246, 0.06);
+  border: 2px solid rgba(255, 90, 31, 0.45); border-radius: 12px; background: rgba(255, 90, 31, 0.06);
 }
-.scan-paper i { display: block; height: 4px; border-radius: 2px; background: rgba(59, 130, 246, 0.3); }
+.scan-paper i { display: block; height: 4px; border-radius: 2px; background: rgba(255, 90, 31, 0.3); }
 .scan-beam {
   position: absolute; left: 0; right: 0; height: 3px;
-  background: linear-gradient(to right, transparent, #3B82F6, #60A5FA, #3B82F6, transparent);
-  box-shadow: 0 0 12px 3px rgba(59, 130, 246, 0.8); animation: scan 2.4s infinite linear;
+  background: linear-gradient(to right, transparent, #FF5A1F, #FF8A5C, #FF5A1F, transparent);
+  box-shadow: 0 0 12px 3px rgba(255, 90, 31, 0.7); animation: scan 2.4s infinite linear;
 }
-.scan-ring { position: absolute; width: 200px; height: 200px; border-radius: 50%; border: 2px dashed rgba(96, 165, 250, 0.25); animation: spin 18s infinite linear; }
+.scan-ring { position: absolute; width: 200px; height: 200px; border-radius: 50%; border: 2px dashed rgba(255, 138, 92, 0.25); animation: spin 18s infinite linear; }
 
 /* ---------- 애니메이션 ---------- */
 .spin { animation: spin 1s linear infinite; }
