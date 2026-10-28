@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Check, Pencil, Archive, RotateCcw } from 'lucide-react';
+import { Plus, Check, Pencil, Archive, RotateCcw, LogOut } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { api } from '../lib/api';
 import { prefs } from '../lib/prefs';
 import { BottomNav, BottomSheet } from '../components/ui';
+import UserManagement from '../components/UserManagement';
 
 const SettingsPage = () => {
-  const { currentSite, setSiteId, refreshSites, showToast } = useApp();
+  const { user, logout, currentSite, setSiteId, refreshSites, showToast } = useApp();
   const [allSites, setAllSites] = useState([]);
   const [editing, setEditing] = useState(null); // { id?, name, address }
   const [saving, setSaving] = useState(false);
@@ -67,6 +68,21 @@ const SettingsPage = () => {
       </header>
 
       <div className="content">
+        <section className="card profile-card">
+          <span className="avatar large">
+            {user.profile_image ? <img src={user.profile_image} alt="" /> : user.nickname.slice(0, 1)}
+          </span>
+          <div className="user-row-main">
+            <p className="option-title">{user.nickname}</p>
+            <p className="option-sub">카카오 로그인 · {user.role === 'admin' ? '관리자' : '일반 사용자'}</p>
+          </div>
+          <button className="btn btn-gray btn-sm" onClick={logout}>
+            <LogOut size={16} /> 로그아웃
+          </button>
+        </section>
+
+        {user.role === 'admin' && <UserManagement />}
+
         <section className="card">
           <div className="section-head">
             <h3 className="section-title">현장 관리</h3>

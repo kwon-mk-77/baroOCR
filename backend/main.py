@@ -8,20 +8,23 @@ from dotenv import load_dotenv
 # Load env vars from .env file (one level up) — DB 모듈 import 전에 실행해야 함
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from db import Base, engine, SessionLocal, IS_SQLITE
-from models import seed_defaults
+from models import seed_defaults, ensure_columns
+from auth import require_user
 from services.storage_service import init_storage, UPLOADS_DIR
 from routers import master, receipts, stats
+from routers import auth as auth_router
 
 app = FastAPI(title="BaroInsu Backend")
 
 # 서버리스(Vercel)에서는 startup 이벤트가 보장되지 않으므로 import 시점에 초기화
 try:
     Base.metadata.create_all(bind=engine)
+    ensure_columns(engine)
     with SessionLocal() as _db:
         seed_defaults(_db)
     print(f"Database ready ({'SQLite' if IS_SQLITE else 'PostgreSQL'}).")
@@ -44,9 +47,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(master.router)
-app.include_router(receipts.router)
-app.include_router(stats.router)
+app.include_router(auth_router.router)
+# 그 외 모든 API는 승인된 로그인 사용자만 사용 가능
+app.include_router(master.router, dependencies=[Depends(require_user)])
+app.include_router(receipts.router, dependencies=[Depends(require_user)])
+app.include_router(stats.router, dependencies=[Depends(require_user)])
 
 
 @app.get("/api/health")

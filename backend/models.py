@@ -50,11 +50,26 @@ class Material(Base):
     default_unit: Mapped[str] = mapped_column(String(20), default="")
 
 
+class User(Base):
+    """카카오 로그인 사용자"""
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kakao_id: Mapped[str] = mapped_column(String(50), unique=True)
+    nickname: Mapped[str] = mapped_column(String(100), default="")
+    profile_image: Mapped[str] = mapped_column(Text, default="")
+    role: Mapped[str] = mapped_column(String(20), default="member")      # admin | member
+    status: Mapped[str] = mapped_column(String(20), default="pending")   # pending | approved | blocked
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class DeliveryReceipt(Base):
     """인수증 1장 (헤더)"""
     __tablename__ = "delivery_receipts"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    created_by_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)  # 등록자
     site_id: Mapped[int] = mapped_column(ForeignKey("sites.id"))
     process_id: Mapped[int] = mapped_column(ForeignKey("processes.id"))
     vendor_id: Mapped[Optional[int]] = mapped_column(ForeignKey("vendors.id"), nullable=True)
@@ -68,6 +83,7 @@ class DeliveryReceipt(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
+    created_by: Mapped[Optional[User]] = relationship()
     site: Mapped[Site] = relationship()
     process: Mapped[Process] = relationship()
     vendor: Mapped[Optional[Vendor]] = relationship()
@@ -107,6 +123,15 @@ DEFAULT_PROCESSES = [
     ("수장공사", "#E03131"),
     ("기타", "#4E5968"),
 ]
+
+
+def ensure_columns(engine):
+    """create_all은 기존 테이블에 컬럼을 추가하지 않으므로, 이후 버전에서 추가된 컬럼을 보정"""
+    from sqlalchemy import inspect, text
+    cols = {c["name"] for c in inspect(engine).get_columns("delivery_receipts")}
+    if "created_by_id" not in cols:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE delivery_receipts ADD COLUMN created_by_id INTEGER REFERENCES users(id)"))
 
 
 def seed_defaults(db):

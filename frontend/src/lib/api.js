@@ -23,6 +23,11 @@ async function request(path, { method = 'GET', body, form } = {}) {
     throw new Error('서버에 연결할 수 없습니다. 네트워크를 확인해주세요.');
   }
 
+  if (res.status === 401 && !path.startsWith('/auth/')) {
+    // 세션 만료 → 로그인 화면으로
+    window.dispatchEvent(new Event('auth:expired'));
+  }
+
   if (!res.ok) {
     let message = `요청에 실패했습니다. (${res.status})`;
     try {
@@ -42,6 +47,12 @@ const imageForm = (file) => {
 };
 
 export const api = {
+  me: () => request('/auth/me'),
+  logout: () => fetch('/api/auth/logout', { method: 'POST' }),
+  kakaoLoginUrl: '/api/auth/kakao/login',
+  users: () => request('/users'),
+  updateUser: (id, data) => request(`/users/${id}`, { method: 'PATCH', body: data }),
+
   sites: (includeInactive = false) => request(`/sites${qs({ include_inactive: includeInactive || undefined })}`),
   createSite: (data) => request('/sites', { method: 'POST', body: data }),
   updateSite: (id, data) => request(`/sites/${id}`, { method: 'PATCH', body: data }),

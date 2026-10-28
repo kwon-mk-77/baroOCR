@@ -11,8 +11,9 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, selectinload, joinedload
 
+from auth import require_user
 from db import get_db
-from models import Site, Process, Vendor, Material, DeliveryReceipt, DeliveryItem
+from models import Site, Process, Vendor, Material, DeliveryReceipt, DeliveryItem, User
 from schemas import ReceiptIn
 from services.ocr_service import process_receipt_image
 from services.storage_service import upload_image
@@ -49,6 +50,7 @@ def receipt_to_dict(r: DeliveryReceipt):
         "receiver_name": r.receiver_name,
         "memo": r.memo,
         "image_url": r.image_url,
+        "created_by_name": r.created_by.nickname if r.created_by else "",
         "created_at": r.created_at.isoformat() if r.created_at else None,
         "updated_at": r.updated_at.isoformat() if r.updated_at else None,
         "items": [item_to_dict(it) for it in r.items],
@@ -91,6 +93,7 @@ def _with_relations(query):
         joinedload(DeliveryReceipt.process),
         joinedload(DeliveryReceipt.vendor),
         joinedload(DeliveryReceipt.site),
+        joinedload(DeliveryReceipt.created_by),
     )
 
 
@@ -254,8 +257,8 @@ def get_receipt(receipt_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/receipts")
-def create_receipt(data: ReceiptIn, db: Session = Depends(get_db)):
-    r = DeliveryReceipt()
+def create_receipt(data: ReceiptIn, db: Session = Depends(get_db), user: User = Depends(require_user)):
+    r = DeliveryReceipt(created_by_id=user.id)
     _apply_payload(db, r, data)
     db.add(r)
     db.commit()

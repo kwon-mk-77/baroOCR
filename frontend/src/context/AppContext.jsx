@@ -6,6 +6,8 @@ import { prefs } from '../lib/prefs';
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [sites, setSites] = useState([]);
   const [processes, setProcesses] = useState([]);
   const [siteId, setSiteIdState] = useState(() => prefs.get('siteId'));
@@ -13,7 +15,29 @@ export function AppProvider({ children }) {
   const [loadError, setLoadError] = useState('');
   const [toast, setToast] = useState(null);
 
+  const checkAuth = useCallback(async () => {
+    try {
+      setUser(await api.me());
+    } catch {
+      setUser(null);
+    } finally {
+      setAuthChecked(true);
+    }
+  }, []);
+
+  useEffect(() => { checkAuth(); }, [checkAuth]);
+
+  // API에서 401을 받으면 로그인 화면으로
+  useEffect(() => {
+    const onExpired = () => setUser(null);
+    window.addEventListener('auth:expired', onExpired);
+    return () => window.removeEventListener('auth:expired', onExpired);
+  }, []);
+
+  const approved = user?.status === 'approved';
+
   const load = useCallback(async () => {
+    setReady(false);
     setLoadError('');
     try {
       const [s, p] = await Promise.all([api.sites(), api.processes()]);
@@ -26,7 +50,12 @@ export function AppProvider({ children }) {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { if (approved) load(); }, [approved, load]);
+
+  const logout = useCallback(async () => {
+    await api.logout().catch(() => {});
+    setUser(null);
+  }, []);
 
   const refreshSites = useCallback(async () => {
     const list = await api.sites();
@@ -56,6 +85,7 @@ export function AppProvider({ children }) {
   }, [toast]);
 
   const value = {
+    user, authChecked, checkAuth, logout,
     ready, loadError, reload: load,
     sites, refreshSites, currentSite, setSiteId,
     processes,

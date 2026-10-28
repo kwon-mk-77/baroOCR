@@ -72,6 +72,7 @@ const DetailPage = () => {
     ['납품 기사', receipt.driver_name],
     ['차량번호', receipt.vehicle_no],
     ['인수자', receipt.receiver_name],
+    ['등록자', receipt.created_by_name],
   ];
 
   return (

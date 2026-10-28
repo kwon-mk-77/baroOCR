@@ -2,8 +2,8 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { Spinner, EmptyState } from './components/ui';
-import { prefs } from './lib/prefs';
 import LandingPage from './pages/LandingPage';
+import PendingPage from './pages/PendingPage';
 import HomePage from './pages/HomePage';
 import CameraPage from './pages/CameraPage';
 import NewReceiptPage from './pages/NewReceiptPage';
@@ -17,8 +17,11 @@ import SettingsPage from './pages/SettingsPage';
 const LegacyDetailRedirect = () => <Navigate to={`/receipts/${useParams().id}`} replace />;
 
 function AppRoutes() {
-  const { ready, loadError, reload } = useApp();
+  const { authChecked, user, ready, loadError, reload } = useApp();
 
+  if (!authChecked) return <Spinner label="불러오는 중..." />;
+  if (!user) return <LandingPage />;
+  if (user.status !== 'approved') return <PendingPage />;
   if (!ready) return <Spinner label="불러오는 중..." />;
   if (loadError) {
     return (
@@ -32,7 +35,7 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={prefs.get('onboarded') ? <Navigate to="/home" replace /> : <LandingPage />} />
+      <Route path="/" element={<Navigate to="/home" replace />} />
       <Route path="/home" element={<HomePage />} />
       <Route path="/camera" element={<CameraPage />} />
       <Route path="/new" element={<NewReceiptPage />} />

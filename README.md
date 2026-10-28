@@ -31,6 +31,21 @@ frontend/           React + Vite
 | `delivery_receipts` | 인수증 1장: 현장, 공정, 업체, **인수일**, 기사, 차량번호, 인수자, 메모, 사진, OCR 원본 |
 | `delivery_items` | 인수증의 품목 라인 (한 장에 여러 품목). 수량·중량은 **숫자 + 단위** 분리 저장 → 합계 계산 가능 |
 
+## 로그인 (카카오)
+
+- 카카오 계정으로 로그인합니다. **처음 로그인한 사람이 자동으로 관리자**가 되고, 이후 사용자는 `승인 대기` 상태로 시작합니다.
+- 관리자는 **설정 > 사용자 관리**에서 승인 / 차단 / 관리자 지정을 할 수 있습니다.
+- 세션은 httpOnly 쿠키(30일)로 유지되며, `/api/auth/*`와 `/api/health`를 제외한 모든 API는 승인된 사용자만 호출할 수 있습니다.
+
+카카오 개발자 콘솔 설정 (developers.kakao.com > 내 애플리케이션):
+1. **앱 설정 > 플랫폼 > Web**: `https://baro-ocr.vercel.app`, `http://localhost:5173`
+2. **카카오 로그인**: 활성화 ON, Redirect URI 등록
+   - `https://baro-ocr.vercel.app/api/auth/kakao/callback`
+   - `http://localhost:5173/api/auth/kakao/callback`
+3. **카카오 로그인 > 동의항목**: 닉네임, 프로필 사진 (이메일 불필요)
+4. **카카오 로그인 > 보안**: Client Secret 생성 후 사용 설정 (권장)
+5. 환경 변수에 `KAKAO_REST_API_KEY`, `KAKAO_CLIENT_SECRET`, `SESSION_SECRET` 입력
+
 ## 로컬 실행
 
 **Windows: `실행.bat`을 더블클릭**하면 백엔드·프론트엔드가 켜지고 브라우저가 열립니다. (최초 1회 패키지 자동 설치)
