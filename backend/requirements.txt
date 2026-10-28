@@ -1,6 +1,5 @@
 fastapi
 uvicorn
-supabase
 python-multipart
 httpx
 pydantic>=2

@@ -13,11 +13,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from dotenv import load_dotenv
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
 
-from supabase import create_client
+import httpx
 
 from db import Base, engine, SessionLocal
 from models import Site, Process, Vendor, Material, DeliveryReceipt, DeliveryItem, seed_defaults
 from services.parsing import split_number_unit, parse_date
+from services.storage_service import _auth_headers
 
 
 def get_or_create(db, model, name, **defaults):
@@ -34,7 +35,9 @@ def main(commit: bool):
     if not (url and key):
         sys.exit("SUPABASE_URL / SUPABASE_KEY 가 필요합니다.")
 
-    legacy = create_client(url, key).table("receipts").select("*").execute().data or []
+    resp = httpx.get(f"{url.rstrip('/')}/rest/v1/receipts", params={"select": "*"}, headers=_auth_headers(key), timeout=30.0)
+    resp.raise_for_status()
+    legacy = resp.json() or []
     print(f"기존 인수증 {len(legacy)}건 발견")
 
     Base.metadata.create_all(bind=engine)
