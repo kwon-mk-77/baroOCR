@@ -4,15 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "granite dev",
+    "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview",
-    "deploy": "ait deploy"
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@apps-in-toss/web-framework": "^2.10.7",
-    "@supabase/supabase-js": "^2.110.8",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.25.0",

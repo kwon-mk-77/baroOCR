@@ -3,6 +3,7 @@ uvicorn
 supabase
 python-multipart
 httpx
-pydantic
+pydantic>=2
 python-dotenv
-openai
+sqlalchemy>=2.0
+psycopg2-binary

@@ -1,397 +1,185 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Image as ImageIcon, Camera } from 'lucide-react';
+import { ArrowLeft, Sparkles, Image as ImageIcon, RotateCcw, Keyboard } from 'lucide-react';
+import { api } from '../lib/api';
+
+const MAX_DIMENSION = 1920;
+
+const fitSize = (width, height) => {
+  if (width <= MAX_DIMENSION && height <= MAX_DIMENSION) return { width, height };
+  return width > height
+    ? { width: MAX_DIMENSION, height: Math.round((height * MAX_DIMENSION) / width) }
+    : { width: Math.round((width * MAX_DIMENSION) / height), height: MAX_DIMENSION };
+};
+
+/** 이미지/비디오 프레임을 최대 1920px JPEG로 축소 */
+const drawToJpeg = (source, srcWidth, srcHeight) =>
+  new Promise((resolve) => {
+    const { width, height } = fitSize(srcWidth, srcHeight);
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext('2d').drawImage(source, 0, 0, width, height);
+    canvas.toBlob((blob) => {
+      resolve({
+        file: new File([blob], 'receipt.jpg', { type: 'image/jpeg' }),
+        dataUrl: canvas.toDataURL('image/jpeg', 0.85),
+      });
+    }, 'image/jpeg', 0.85);
+  });
+
+const loadImage = (file) =>
+  new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = reject;
+    img.src = url;
+  });
 
 const CameraPage = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const [imagePreview, setImagePreview] = useState(null);
+  const streamRef = useRef(null);
+  const [captured, setCaptured] = useState(null); // { file, dataUrl }
   const [loading, setLoading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [cameraActive, setCameraActive] = useState(false);
-  const [cameraError, setCameraError] = useState(false);
+  const [cameraState, setCameraState] = useState('starting'); // starting | active | error
 
-  useEffect(() => {
-    startCamera();
-    return () => {
-      stopCamera();
-    };
+  const stopCamera = useCallback(() => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
   }, []);
 
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'environment',
-          width: { ideal: 4096 },
-          height: { ideal: 2160 }
-        }
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        setCameraActive(true);
-        setCameraError(false);
-      }
-    } catch (err) {
-      console.error("Error accessing camera:", err);
-      setCameraError(true);
+  // 미리보기가 없을 때만 카메라를 켜고, 화면을 벗어나면 반드시 끔
+  useEffect(() => {
+    if (captured) return undefined;
+    let cancelled = false;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraState('error'); // http 접속 등 카메라 API를 쓸 수 없는 환경
+      return undefined;
     }
-  };
+    setCameraState('starting');
 
-  const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const tracks = videoRef.current.srcObject.getTracks();
-      tracks.forEach(track => track.stop());
-    }
-  };
+    navigator.mediaDevices
+      .getUserMedia({ video: { facingMode: 'environment', width: { ideal: 3840 }, height: { ideal: 2160 } } })
+      .then((stream) => {
+        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
+        streamRef.current = stream;
+        if (videoRef.current) videoRef.current.srcObject = stream;
+        setCameraState('active');
+      })
+      .catch(() => !cancelled && setCameraState('error'));
 
-  const compressImage = (fileOrBlob) => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        const MAX_DIMENSION = 1920;
-        
-        if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
-          if (width > height) {
-            height = Math.round((height * MAX_DIMENSION) / width);
-            width = MAX_DIMENSION;
-          } else {
-            width = Math.round((width * MAX_DIMENSION) / height);
-            height = MAX_DIMENSION;
-          }
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        canvas.toBlob((blob) => {
-          const compressedFile = new File([blob], "image.jpg", { type: 'image/jpeg' });
-          resolve({ file: compressedFile, dataUrl: canvas.toDataURL('image/jpeg', 0.8) });
-        }, 'image/jpeg', 0.8);
-      };
-      
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(fileOrBlob);
-    });
-  };
+    return () => { cancelled = true; stopCamera(); };
+  }, [captured, stopCamera]);
 
-  const captureFromVideo = () => {
-    if (!videoRef.current || !canvasRef.current) return;
+  const captureFromVideo = async () => {
     const video = videoRef.current;
-    const canvas = canvasRef.current;
-    
-    let width = video.videoWidth;
-    let height = video.videoHeight;
-    const MAX_DIMENSION = 1920;
-    
-    if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
-      if (width > height) {
-        height = Math.round((height * MAX_DIMENSION) / width);
-        width = MAX_DIMENSION;
-      } else {
-        width = Math.round((width * MAX_DIMENSION) / height);
-        height = MAX_DIMENSION;
-      }
-    }
-    
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, width, height);
-    
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
-        setSelectedFile(file);
-        
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        setImagePreview(dataUrl);
-        stopCamera();
-      }
-    }, 'image/jpeg', 0.8);
+    if (!video || !video.videoWidth) return;
+    setCaptured(await drawToJpeg(video, video.videoWidth, video.videoHeight));
   };
 
   const handleFileChange = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const { file: compressedFile, dataUrl } = await compressImage(file);
-      setSelectedFile(compressedFile);
-      setImagePreview(dataUrl);
-      stopCamera();
-    }
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const img = await loadImage(file);
+    setCaptured(await drawToJpeg(img, img.width, img.height));
   };
 
-  const handleRetake = () => {
-    setImagePreview(null);
-    setSelectedFile(null);
-    startCamera();
-  };
+  const goToForm = (state) => navigate('/new', { replace: true, state: { imagePreview: captured.dataUrl, ...state } });
 
   const processOCR = async () => {
-    if (!selectedFile) return;
-    
+    if (!captured) return;
     setLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('image', selectedFile);
-      
-      const response = await fetch(`/api/ocr`, {
-        method: 'POST',
-        body: formData,
+      const res = await api.ocr(captured.file);
+      goToForm({
+        imageUrl: res.image_url,
+        ocr: res.result,
+        ocrRaw: res.raw,
+        ocrError: res.ok ? null : res.error,
       });
-      
-      if (!response.ok) {
-        throw new Error('OCR API failed');
-      }
-      
-      const data = await response.json();
-      
-      navigate('/edit', { 
-        state: { 
-          ocrData: data, 
-          imagePreview
-        } 
-      });
-    } catch (error) {
-      alert("OCR 처리 중 오류가 발생했습니다. 수동 입력으로 전환합니다.");
-      navigate('/edit', { state: { imagePreview, ocrData: {} } });
+    } catch (err) {
+      // 업로드 자체가 실패한 경우: 저장할 때 다시 업로드
+      goToForm({ ocrError: err.message });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="page" style={{ padding: 0, backgroundColor: '#000', color: '#fff', height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div className="camera-page">
       {loading && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'radial-gradient(circle at center, #1e1b4b 0%, #09090b 100%)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          color: '#fff',
-          padding: '24px'
-        }}>
-          {/* Custom style for keyframes */}
-          <style>{`
-            @keyframes scan {
-              0% { top: 0%; opacity: 0.3; }
-              50% { top: 100%; opacity: 1; }
-              100% { top: 0%; opacity: 0.3; }
-            }
-            @keyframes pulse-glow {
-              0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.4)); }
-              50% { transform: scale(1.05); filter: drop-shadow(0 0 30px rgba(59, 130, 246, 0.8)); }
-            }
-            @keyframes spin-circle {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-            @keyframes fade-in-out {
-              0%, 100% { opacity: 0.6; }
-              50% { opacity: 1; }
-            }
-          `}</style>
-
-          {/* Futuristic Scanning UI Container */}
-          <div style={{ position: 'relative', width: '200px', height: '240px', marginBottom: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            
-            {/* Glowing Holographic Receipt Outline */}
-            <div style={{
-              width: '140px',
-              height: '190px',
-              border: '2px solid rgba(59, 130, 246, 0.4)',
-              borderRadius: '12px',
-              backgroundColor: 'rgba(59, 130, 246, 0.05)',
-              position: 'relative',
-              overflow: 'hidden',
-              animation: 'pulse-glow 3s infinite ease-in-out',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              padding: '16px'
-            }}>
-              {/* Dummy receipt lines for effect */}
-              <div style={{ height: '4px', backgroundColor: 'rgba(59, 130, 246, 0.3)', width: '60%', borderRadius: '2px' }} />
-              <div style={{ height: '4px', backgroundColor: 'rgba(59, 130, 246, 0.2)', width: '80%', borderRadius: '2px' }} />
-              <div style={{ height: '4px', backgroundColor: 'rgba(59, 130, 246, 0.2)', width: '40%', borderRadius: '2px' }} />
-              <div style={{ height: '4px', backgroundColor: 'rgba(59, 130, 246, 0.3)', width: '90%', borderRadius: '2px' }} />
-              <div style={{ height: '4px', backgroundColor: 'rgba(59, 130, 246, 0.2)', width: '70%', borderRadius: '2px' }} />
-              
-              {/* Vertical Laser Scanner Beam */}
-              <div style={{
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                height: '3px',
-                background: 'linear-gradient(to right, transparent, #3b82f6, #60a5fa, #3b82f6, transparent)',
-                boxShadow: '0 0 12px 3px rgba(59, 130, 246, 0.8)',
-                animation: 'scan 2.5s infinite linear'
-              }} />
+        <div className="scan-overlay">
+          <div className="scan-visual">
+            <div className="scan-paper">
+              <i style={{ width: '60%' }} /><i style={{ width: '85%' }} /><i style={{ width: '45%' }} />
+              <i style={{ width: '90%' }} /><i style={{ width: '70%' }} />
+              <div className="scan-beam" />
             </div>
-
-            {/* Orbit HUD Ring */}
-            <div style={{
-              position: 'absolute',
-              width: '200px',
-              height: '200px',
-              border: '2px dashed rgba(96, 165, 250, 0.2)',
-              borderRadius: '50%',
-              animation: 'spin-circle 20s infinite linear'
-            }} />
-            
-            {/* Inner HUD Ring */}
-            <div style={{
-              position: 'absolute',
-              width: '170px',
-              height: '170px',
-              border: '2px dashed rgba(59, 130, 246, 0.3)',
-              borderTopColor: 'transparent',
-              borderBottomColor: 'transparent',
-              borderRadius: '50%',
-              animation: 'spin-circle 8s infinite linear reverse'
-            }} />
+            <div className="scan-ring" />
           </div>
-
-          {/* Title and message */}
-          <h3 style={{ fontSize: '1.4rem', fontWeight: 'bold', letterSpacing: '-0.025em', marginBottom: '12px', color: '#fff' }}>
-            AI 문서 분석 중
-          </h3>
-          <p style={{ 
-            fontSize: '1.05rem', 
-            color: 'rgba(255, 255, 255, 0.75)', 
-            animation: 'fade-in-out 1.5s infinite ease-in-out',
-            textAlign: 'center',
-            minHeight: '24px',
-            fontWeight: '500'
-          }}>
-            AI가 인수증을 읽는 중입니다...
-          </p>
+          <h3>AI가 인수증을 읽고 있어요</h3>
+          <p>업체, 품목, 수량을 찾는 중입니다 (5~15초)</p>
         </div>
       )}
 
-      {/* Header */}
-      <div className="header" style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, backgroundColor: 'transparent', color: '#fff', borderBottom: 'none' }}>
-        <ArrowLeft className="header-icon" color="#fff" size={28} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} onClick={() => { stopCamera(); navigate(-1); }} />
-        <div style={{ width: 28 }}></div>
+      <div className="camera-header">
+        <button className="icon-btn light" onClick={() => navigate(-1)} aria-label="뒤로가기">
+          <ArrowLeft size={28} />
+        </button>
       </div>
 
-      <input 
-        type="file" 
-        accept="image/*" 
-        ref={fileInputRef} 
-        style={{ display: 'none' }} 
-        onChange={handleFileChange}
-      />
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
+      <input type="file" accept="image/*" ref={fileInputRef} hidden onChange={handleFileChange} />
 
-      {!imagePreview ? (
-        <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000' }}>
-          
-          {cameraError ? (
-            <div style={{ textAlign: 'center', padding: 20, zIndex: 10 }}>
-              <p className="mb-4 text-lg">카메라를 실행할 수 없습니다.</p>
-              <button onClick={() => fileInputRef.current?.click()} className="btn btn-primary" style={{ padding: '12px 24px', borderRadius: '12px' }}>
-                사진 앨범에서 선택
+      {!captured ? (
+        <div className="camera-view">
+          {cameraState === 'error' ? (
+            <div className="camera-fallback">
+              <p>카메라를 사용할 수 없습니다.<br />브라우저의 카메라 권한을 확인하거나 사진을 선택해주세요.</p>
+              <button onClick={() => fileInputRef.current?.click()} className="btn btn-primary">
+                <ImageIcon size={20} /> 사진 선택
+              </button>
+              <button onClick={() => navigate('/new', { replace: true })} className="btn btn-ghost-light">
+                <Keyboard size={18} /> 직접 입력하기
               </button>
             </div>
           ) : (
-            <video 
-              ref={videoRef} 
-              autoPlay 
-              playsInline 
-              muted
-              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} 
-            />
-          )}
-
-          {/* Overlay elements */}
-          {!cameraError && cameraActive && (
             <>
-              {/* Top texts */}
-              <div style={{ position: 'absolute', top: 90, width: '100%', textAlign: 'center', zIndex: 10 }}>
-                <h2 className="text-2xl font-bold mb-2 text-white" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>인수증을 스캔하세요</h2>
-                <p style={{ color: 'rgba(255,255,255,0.95)', fontSize: '1.1rem', textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>글자가 잘 보이도록 밝은 곳에서 촬영하세요</p>
+              <video ref={videoRef} autoPlay playsInline muted className="camera-video" />
+              <div className="camera-guide">
+                <p className="camera-guide-title">인수증을 네모 칸에 맞춰주세요</p>
+                <p className="camera-guide-desc">밝은 곳에서 글자가 잘 보이게 찍어주세요</p>
+                <div className="camera-frame"><span /><span /><span /><span /></div>
               </div>
-
-              {/* Centered Capture Button at Bottom */}
-              <div style={{ 
-                position: 'absolute', 
-                bottom: 40, 
-                left: 0, 
-                right: 0, 
-                display: 'flex', 
-                justifyContent: 'center',
-                alignItems: 'center',
-                zIndex: 10 
-              }}>
-                {/* 갤러리 앨범 아이콘 (좌측에 배치) */}
-                <div 
-                  onClick={() => fileInputRef.current?.click()}
-                  style={{ position: 'absolute', left: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', opacity: 0.7 }}
-                >
-                  <ImageIcon size={32} color="#fff" />
-                </div>
-
-                {/* 중앙 캡처 촬영 버튼 */}
-                <div 
-                  onClick={captureFromVideo}
-                  style={{ width: 76, height: 76, borderRadius: '50%', border: '4px solid #fff', padding: 3, cursor: 'pointer', backgroundColor: 'transparent' }}
-                >
-                  <div style={{ width: '100%', height: '100%', backgroundColor: '#fff', borderRadius: '50%', transition: 'transform 0.1s', ':active': { transform: 'scale(0.95)' } }}></div>
-                </div>
+              <div className="camera-controls">
+                <button className="camera-side-btn" onClick={() => fileInputRef.current?.click()} aria-label="앨범에서 선택">
+                  <ImageIcon size={26} />
+                  <span>앨범</span>
+                </button>
+                <button className="shutter" onClick={captureFromVideo} disabled={cameraState !== 'active'} aria-label="촬영">
+                  <span />
+                </button>
+                <button className="camera-side-btn" onClick={() => navigate('/new', { replace: true })} aria-label="직접 입력">
+                  <Keyboard size={26} />
+                  <span>직접입력</span>
+                </button>
               </div>
             </>
           )}
         </div>
       ) : (
-        // Preview Screen after capture
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0 20px', paddingTop: 80 }}>
-          <div style={{ 
-            flex: 1, 
-            backgroundImage: `url(${imagePreview})`,
-            backgroundSize: 'contain',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            borderRadius: 'var(--radius-lg)',
-            marginBottom: '24px'
-          }} />
-          
-          {/* Action Buttons for Result */}
-          <div style={{ position: 'absolute', bottom: 30, left: '50%', transform: 'translateX(-50%)', width: '90%', maxWidth: 440, zIndex: 50 }}>
-            <div className="flex gap-3">
-              <button 
-                className="btn" 
-                onClick={handleRetake}
-                style={{ flex: 1, padding: '16px', borderRadius: '16px', fontSize: '1.05rem', backgroundColor: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', backdropFilter: 'blur(10px)' }}
-              >
-                다시 찍기
-              </button>
-              <button 
-                className="btn btn-primary" 
-                onClick={processOCR}
-                style={{ flex: 2, padding: '16px', borderRadius: '16px', fontSize: '1.05rem', boxShadow: '0 8px 24px rgba(49, 130, 246, 0.3)' }}
-              >
-                <Sparkles size={20} style={{ marginRight: 8 }} />
-                AI 분석 시작
-              </button>
-            </div>
+        <div className="camera-preview">
+          <img src={captured.dataUrl} alt="촬영한 인수증" />
+          <div className="camera-preview-actions">
+            <button className="btn btn-glass" onClick={() => setCaptured(null)}>
+              <RotateCcw size={18} /> 다시 찍기
+            </button>
+            <button className="btn btn-primary grow-2" onClick={processOCR}>
+              <Sparkles size={20} /> AI 분석 시작
+            </button>
           </div>
         </div>
       )}
@@ -400,4 +188,3 @@ const CameraPage = () => {
 };
 
 export default CameraPage;
-

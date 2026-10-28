@@ -5,11 +5,10 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: true, // 같은 와이파이의 휴대폰에서 접속 테스트 가능
     proxy: {
-      '/api': {
-        target: 'http://127.0.0.1:8000',
-        changeOrigin: true
-      }
+      '/api': { target: 'http://127.0.0.1:8000', changeOrigin: true },
+      '/uploads': { target: 'http://127.0.0.1:8000', changeOrigin: true },
     }
   }
 })

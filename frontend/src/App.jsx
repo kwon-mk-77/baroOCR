@@ -1,113 +1,61 @@
-import React, { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { supabase } from './supabaseClient';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { AppProvider, useApp } from './context/AppContext';
+import { Spinner, EmptyState } from './components/ui';
+import { prefs } from './lib/prefs';
 import LandingPage from './pages/LandingPage';
-import LoginPage from './pages/LoginPage';
-import IntroPage from './pages/IntroPage';
+import HomePage from './pages/HomePage';
 import CameraPage from './pages/CameraPage';
-import EditPage from './pages/EditPage';
+import NewReceiptPage from './pages/NewReceiptPage';
 import ListPage from './pages/ListPage';
 import DetailPage from './pages/DetailPage';
+import EditReceiptPage from './pages/EditReceiptPage';
+import StatsPage from './pages/StatsPage';
+import SettingsPage from './pages/SettingsPage';
 
-// 로그인 여부를 판단하여 접근을 제한하는 Auth Guard
-const ProtectedRoute = ({ children }) => {
-  const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(true);
+// 예전 주소(/detail/:id) 호환
+const LegacyDetailRedirect = () => <Navigate to={`/receipts/${useParams().id}`} replace />;
 
-  useEffect(() => {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
+function AppRoutes() {
+  const { ready, loadError, reload } = useApp();
 
-    // 초기 세션 획득
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    // 인증 상태 변화 리스너 등록
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  if (loading) {
+  if (!ready) return <Spinner label="불러오는 중..." />;
+  if (loadError) {
     return (
-      <div style={loadingStyles.container}>
-        <div style={loadingStyles.text}>로그인 확인 중...</div>
-      </div>
+      <EmptyState
+        title="서버에 연결할 수 없습니다"
+        description={loadError}
+        action={<button className="btn btn-primary mt-3" onClick={reload}>다시 시도</button>}
+      />
     );
   }
 
-  if (!session) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return children;
-};
-
-function App() {
   return (
-    <BrowserRouter>
-      <div className="app-container">
-        <Routes>
-          {/* 퍼블릭 랜딩 페이지 */}
-          <Route path="/" element={<LandingPage />} />
-          
-          {/* 로그인 화면 */}
-          <Route path="/login" element={<LoginPage />} />
-
-          {/* 인증이 필요한 비공개 서비스 라우트들 */}
-          <Route path="/menu" element={
-            <ProtectedRoute>
-              <IntroPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/camera" element={
-            <ProtectedRoute>
-              <CameraPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/edit" element={
-            <ProtectedRoute>
-              <EditPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/list" element={
-            <ProtectedRoute>
-              <ListPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/detail/:id" element={
-            <ProtectedRoute>
-              <DetailPage />
-            </ProtectedRoute>
-          } />
-        </Routes>
-      </div>
-    </BrowserRouter>
+    <Routes>
+      <Route path="/" element={prefs.get('onboarded') ? <Navigate to="/home" replace /> : <LandingPage />} />
+      <Route path="/home" element={<HomePage />} />
+      <Route path="/camera" element={<CameraPage />} />
+      <Route path="/new" element={<NewReceiptPage />} />
+      <Route path="/list" element={<ListPage />} />
+      <Route path="/receipts/:id" element={<DetailPage />} />
+      <Route path="/receipts/:id/edit" element={<EditReceiptPage />} />
+      <Route path="/stats" element={<StatsPage />} />
+      <Route path="/settings" element={<SettingsPage />} />
+      <Route path="/menu" element={<Navigate to="/home" replace />} />
+      <Route path="/detail/:id" element={<LegacyDetailRedirect />} />
+      <Route path="*" element={<Navigate to="/home" replace />} />
+    </Routes>
   );
 }
 
-const loadingStyles = {
-  container: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '100vh',
-    width: '100%',
-    backgroundColor: '#F3F4F6',
-  },
-  text: {
-    fontSize: '16px',
-    color: '#4B5563',
-    fontWeight: '600',
-    fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
-  }
-};
-
-export default App;
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppProvider>
+        <div className="app-container">
+          <AppRoutes />
+        </div>
+      </AppProvider>
+    </BrowserRouter>
+  );
+}

@@ -22,10 +22,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-.granite
-
-.env
-.env.*
-!.env.template
-

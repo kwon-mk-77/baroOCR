@@ -2,97 +2,151 @@ import os
 import json
 import base64
 import httpx
-from openai import AsyncOpenAI
 
-async def process_receipt_image(file_bytes: bytes, filename: str, content_type: str) -> dict:
-    upstage_api_key = os.environ.get("UPSTAGE_API_KEY")
-    
-    if not upstage_api_key:
-        raise Exception("UPSTAGE_API_KEY is not set in Vercel/Environment settings.")
-        
-    print("Using Upstage Document Parse API...")
-    upstage_url = "https://api.upstage.ai/v1/document-ai/document-parse"
-    headers = {"Authorization": f"Bearer {upstage_api_key}"}
-    files = {"document": (filename, file_bytes, content_type)}
-    data = {"ocr": "force"}
-    
-    async with httpx.AsyncClient(timeout=30.0) as http_client:
-        resp = await http_client.post(upstage_url, headers=headers, files=files, data=data)
-        
+from services.parsing import split_number_unit, parse_date
+
+
+async def _chat_completion(base_url: str, api_key: str, body: dict) -> str:
+    """OpenAI 호환 Chat Completions 호출 (openai SDK 없이 httpx로 직접 호출)"""
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        resp = await client.post(
+            f"{base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json=body,
+        )
     if resp.status_code != 200:
-        raise Exception(f"Upstage Document Parse API error ({resp.status_code}): {resp.text}")
-        
-    upstage_data = resp.json()
-    
-    # Extract document layout representation (Markdown or HTML)
-    content_dict = upstage_data.get("content", {})
-    document_text = content_dict.get("markdown") or content_dict.get("html") or content_dict.get("text")
-    
-    # Fallback to elements loop if top-level content is missing or empty
+        raise Exception(f"AI API 오류 ({resp.status_code}): {resp.text[:300]}")
+    return resp.json()["choices"][0]["message"]["content"]
+
+EXTRACT_PROMPT = """
+건설현장 자재 인수증(거래명세서/납품서)의 내용입니다.
+다음 정보를 추출해서 JSON으로만 반환하세요. 마크다운 코드블록이나 설명은 쓰지 마세요.
+값이 없으면 빈 문자열("")을 넣으세요. 숫자 필드에는 숫자만, 단위는 별도 필드에 넣으세요.
+
+{
+  "received_date": "납품/인수 날짜 (YYYY-MM-DD)",
+  "vendor": "공급업체(납품업체) 상호",
+  "driver_name": "납품 기사 이름",
+  "vehicle_no": "차량번호 (예: 12가3456)",
+  "receiver_name": "현장 인수자(확인자) 이름",
+  "items": [
+    {
+      "material_name": "품목명 (예: 철근, 시멘트, 레미콘)",
+      "spec": "규격 (예: HD13, 25-21-120)",
+      "quantity": "수량 숫자 (예: 150)",
+      "unit": "수량 단위 (예: 포, 본, ㎥, 대, EA)",
+      "weight": "중량 숫자 (예: 3.5)",
+      "weight_unit": "중량 단위 (예: ton, kg)"
+    }
+  ]
+}
+
+품목이 여러 줄이면 items 배열에 모두 넣으세요.
+"""
+
+
+def _parse_json(text: str) -> dict:
+    text = text.strip()
+    start, end = text.find("{"), text.rfind("}")
+    if start == -1 or end == -1:
+        raise ValueError(f"AI 응답에서 JSON을 찾을 수 없습니다: {text[:200]}")
+    return json.loads(text[start:end + 1])
+
+
+def _normalize(raw: dict) -> dict:
+    """AI 응답을 프론트엔드 폼 구조로 정리 (숫자/단위 분리, 날짜 정규화)"""
+    items = []
+    for it in raw.get("items") or []:
+        if not isinstance(it, dict):
+            continue
+        qty, qty_unit = split_number_unit(it.get("quantity"))
+        weight, w_unit = split_number_unit(it.get("weight"))
+        name = str(it.get("material_name") or "").strip()
+        if not name and qty is None and weight is None:
+            continue
+        items.append({
+            "material_name": name,
+            "spec": str(it.get("spec") or "").strip(),
+            "quantity": qty,
+            "unit": str(it.get("unit") or "").strip() or qty_unit,
+            "weight": weight,
+            "weight_unit": str(it.get("weight_unit") or "").strip() or w_unit,
+        })
+
+    received = parse_date(raw.get("received_date"))
+    return {
+        "received_date": received.isoformat() if received else "",
+        "vendor": str(raw.get("vendor") or "").strip(),
+        "driver_name": str(raw.get("driver_name") or "").strip(),
+        "vehicle_no": str(raw.get("vehicle_no") or "").strip(),
+        "receiver_name": str(raw.get("receiver_name") or "").strip(),
+        "items": items,
+    }
+
+
+async def _extract_with_upstage(api_key: str, file_bytes: bytes, filename: str, content_type: str) -> dict:
+    async with httpx.AsyncClient(timeout=40.0) as http_client:
+        resp = await http_client.post(
+            "https://api.upstage.ai/v1/document-ai/document-parse",
+            headers={"Authorization": f"Bearer {api_key}"},
+            files={"document": (filename, file_bytes, content_type)},
+            data={"ocr": "force"},
+        )
+    if resp.status_code != 200:
+        raise Exception(f"Upstage Document Parse 오류 ({resp.status_code}): {resp.text[:300]}")
+
+    data = resp.json()
+    content = data.get("content", {}) or {}
+    document_text = content.get("markdown") or content.get("html") or content.get("text") or ""
     if not document_text:
-        elements = upstage_data.get("elements", [])
-        parsed_parts = []
-        for el in elements:
-            el_content = el.get("content", {})
-            el_text = el.get("text", "")
-            
-            if isinstance(el_content, dict) and el_content.get("markdown"):
-                parsed_parts.append(el_content["markdown"])
-            elif isinstance(el_content, dict) and el_content.get("html"):
-                parsed_parts.append(el_content["html"])
-            elif isinstance(el_content, dict) and el_content.get("text"):
-                parsed_parts.append(el_content["text"])
-            elif el_text:
-                parsed_parts.append(el_text)
-        document_text = "\n\n".join(parsed_parts)
-        
+        parts = []
+        for el in data.get("elements", []):
+            c = el.get("content", {})
+            if isinstance(c, dict):
+                parts.append(c.get("markdown") or c.get("html") or c.get("text") or "")
+            elif el.get("text"):
+                parts.append(el["text"])
+        document_text = "\n\n".join(p for p in parts if p)
     if not document_text.strip():
-        raise Exception("Upstage parsed document is empty or text could not be extracted.")
-        
-    print(f"Upstage parsing completed. Extracted length: {len(document_text)}")
-    
-    # Use Upstage Solar Pro (OpenAI-compatible) to align parsed layout text to JSON schema
-    solar_client = AsyncOpenAI(api_key=upstage_api_key, base_url="https://api.upstage.ai/v1")
-    
-    prompt = f"""
-    건설현장 자재 인수증(영수증)에서 추출된 문서 레이아웃 텍스트(마크다운/HTML 포함)입니다.
-    이 텍스트에서 다음 5가지 핵심 정보를 추출해서 JSON 형식으로만 반환해주세요.
-    
-    1. item: 품목명 (예: 철근, 시멘트, 레미콘 등)
-    2. vendor: 공급업체명 (납품업체)
-    3. spec: 규격 (있는 경우만, 없으면 빈 문자열)
-    4. quantity: 수량 (숫자와 단위 포함, 예: 150포, 6대 등. 없으면 빈 문자열)
-    5. weight: 중량 (숫자와 단위 포함, 예: 3ton, 5톤 등. 없으면 빈 문자열)
-    6. driver: 인수자 이름 (있는 경우만, 없으면 빈 문자열)
-    
-    응답은 반드시 아래와 같은 JSON 구조로만 작성하고, 마크다운 코드 블록(```json ... ```)이나 다른 설명 텍스트를 포함하지 마세요.
-    {{
-      "item": "추출된 품목",
-      "vendor": "추출된 공급업체",
-      "spec": "추출된 규격",
-      "quantity": "추출된 수량",
-      "weight": "추출된 중량",
-      "driver": "추출된 기사명"
-    }}
-    
-    [추출된 문서 텍스트]
-    {document_text}
-    """
-    
-    response = await solar_client.chat.completions.create(
-        model="solar-pro",
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=300,
-        temperature=0.0
-    )
-    
-    result_text = response.choices[0].message.content.strip()
-    if result_text.startswith("```json"):
-        result_text = result_text.replace("```json", "").replace("```", "").strip()
-    elif result_text.startswith("```"):
-        result_text = result_text.replace("```", "").strip()
-        
-    parsed_data = json.loads(result_text)
-    default_data = {"item": "", "vendor": "", "spec": "", "quantity": "", "weight": "", "driver": ""}
-    default_data.update(parsed_data)
-    return default_data
+        raise Exception("문서에서 글자를 읽지 못했습니다.")
+
+    content = await _chat_completion("https://api.upstage.ai/v1", api_key, {
+        "model": "solar-pro",
+        "messages": [{"role": "user", "content": EXTRACT_PROMPT + "\n[문서 텍스트]\n" + document_text}],
+        "max_tokens": 1500,
+        "temperature": 0.0,
+    })
+    return _parse_json(content)
+
+
+async def _extract_with_openai(api_key: str, file_bytes: bytes, content_type: str) -> dict:
+    b64 = base64.b64encode(file_bytes).decode("utf-8")
+    content = await _chat_completion("https://api.openai.com/v1", api_key, {
+        "model": os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
+        "messages": [{
+            "role": "user",
+            "content": [
+                {"type": "text", "text": EXTRACT_PROMPT},
+                {"type": "image_url", "image_url": {"url": f"data:{content_type or 'image/jpeg'};base64,{b64}"}},
+            ],
+        }],
+        "response_format": {"type": "json_object"},
+        "max_tokens": 1500,
+        "temperature": 0.0,
+    })
+    return _parse_json(content)
+
+
+async def process_receipt_image(file_bytes: bytes, filename: str, content_type: str) -> tuple[dict, dict]:
+    """(정리된 결과, AI 원본 결과)를 반환. Upstage 키가 있으면 우선 사용, 없으면 OpenAI Vision."""
+    upstage_key = os.environ.get("UPSTAGE_API_KEY")
+    openai_key = os.environ.get("OPENAI_API_KEY")
+
+    if upstage_key:
+        raw = await _extract_with_upstage(upstage_key, file_bytes, filename, content_type)
+    elif openai_key:
+        raw = await _extract_with_openai(openai_key, file_bytes, content_type)
+    else:
+        raise Exception("OCR API 키(UPSTAGE_API_KEY 또는 OPENAI_API_KEY)가 설정되지 않았습니다.")
+
+    return _normalize(raw), raw

@@ -1,310 +1,161 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Camera, Search, Filter, ArrowLeft, Truck, Building, Hammer, Zap, Wrench, Package, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Search, Download, X } from 'lucide-react';
+import { useApp } from '../context/AppContext';
+import { api } from '../lib/api';
+import { PERIODS, periodRange, formatDateLabel } from '../lib/format';
+import { BottomNav, ChipGroup, Spinner, EmptyState } from '../components/ui';
+import SiteSwitcher from '../components/SiteSwitcher';
+import ReceiptRow from '../components/ReceiptRow';
 
-const PROCESS_OPTIONS = [
-  "토공사", "골조공사", "조적/미장공사", "전기/설비공사", "수장공사", "기타"
-];
-
-// Helper to assign a specific icon and color to each process
-const getProcessIcon = (process) => {
-  const configs = {
-    "토공사": { icon: Truck, bg: "#E8F3FF", color: "#3182F6" }, 
-    "골조공사": { icon: Building, bg: "#F3EEFF", color: "#6B36BA" }, 
-    "조적/미장공사": { icon: Hammer, bg: "#FFF4E6", color: "#F08C00" }, 
-    "전기/설비공사": { icon: Zap, bg: "#E3FAF3", color: "#0CA678" }, 
-    "수장공사": { icon: Wrench, bg: "#FFE8EC", color: "#E03131" },
-    "기타": { icon: Package, bg: "#F2F4F6", color: "#4E5968" }
-  };
-  return configs[process] || configs["기타"];
-};
+const PAGE_SIZE = 30;
 
 const ListPage = () => {
   const navigate = useNavigate();
-  const [allReceipts, setAllReceipts] = useState([]);
-  const [filteredReceipts, setFilteredReceipts] = useState([]);
+  const [searchParams] = useSearchParams();
+  const { currentSite, processes } = useApp();
+
+  const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [period, setPeriod] = useState(searchParams.get('period') || 'all');
+  const [customRange, setCustomRange] = useState({ date_from: '', date_to: '' });
+  const [processId, setProcessId] = useState(null);
+
+  const [items, setItems] = useState([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [deleteModalTarget, setDeleteModalTarget] = useState(null);
-  
-  // Filter states
-  const [filterType, setFilterType] = useState('전체'); 
-  const [filterProcess, setFilterProcess] = useState('');
-  const [filterItem, setFilterItem] = useState('');
-  const [filterDateFrom, setFilterDateFrom] = useState('');
-  const [filterDateTo, setFilterDateTo] = useState('');
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  const fetchReceipts = async () => {
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query.trim()), 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  const filters = useMemo(() => ({
+    site_id: currentSite?.id,
+    process_id: processId,
+    q: debouncedQuery,
+    ...(period === 'custom' ? customRange : periodRange(period)),
+  }), [currentSite, processId, debouncedQuery, period, customRange]);
+
+  useEffect(() => {
+    let cancelled = false;
     setLoading(true);
+    api.receipts({ ...filters, limit: PAGE_SIZE, offset: 0 })
+      .then((res) => {
+        if (cancelled) return;
+        setItems(res.items);
+        setTotal(res.total);
+      })
+      .catch(() => !cancelled && setItems([]))
+      .finally(() => !cancelled && setLoading(false));
+    return () => { cancelled = true; };
+  }, [filters]);
+
+  const loadMore = async () => {
+    setLoadingMore(true);
     try {
-      const url = `/api/receipts`;
-      const response = await fetch(url);
-      if (response.ok) {
-        const data = await response.json();
-        setAllReceipts(data);
-        applyFilters(data, filterType, filterProcess, filterItem, filterDateFrom, filterDateTo);
-      }
-    } catch (error) {
-      console.error("Failed to fetch receipts:", error);
+      const res = await api.receipts({ ...filters, limit: PAGE_SIZE, offset: items.length });
+      setItems((prev) => [...prev, ...res.items]);
+      setTotal(res.total);
     } finally {
-      setLoading(false);
+      setLoadingMore(false);
     }
   };
 
-  useEffect(() => {
-    fetchReceipts();
-  }, []);
+  // 인수일 기준으로 묶어서 표시
+  const groups = useMemo(() => {
+    const map = new Map();
+    items.forEach((r) => {
+      if (!map.has(r.received_date)) map.set(r.received_date, []);
+      map.get(r.received_date).push(r);
+    });
+    return [...map.entries()];
+  }, [items]);
 
-  const applyFilters = (data, type, process, item, dateFrom, dateTo) => {
-    let filtered = [...data];
-    
-    if (type === '공정별' && process) {
-      filtered = filtered.filter(r => r.process === process);
-    } 
-    else if (type === '자재별' && item) {
-      filtered = filtered.filter(r => r.item.toLowerCase().includes(item.toLowerCase()));
-    }
-    else if (type === '일자별' && (dateFrom || dateTo)) {
-      filtered = filtered.filter(r => {
-        if (!r.createdAt) return false;
-        const itemDate = new Date(r.createdAt);
-        itemDate.setHours(0,0,0,0);
-        
-        let match = true;
-        if (dateFrom) {
-          const fromDate = new Date(dateFrom);
-          fromDate.setHours(0,0,0,0);
-          if (itemDate < fromDate) match = false;
-        }
-        if (dateTo) {
-          const toDate = new Date(dateTo);
-          toDate.setHours(0,0,0,0);
-          if (itemDate > toDate) match = false;
-        }
-        return match;
-      });
-    }
-    
-    setFilteredReceipts(filtered);
-  };
-
-  useEffect(() => {
-    applyFilters(allReceipts, filterType, filterProcess, filterItem, filterDateFrom, filterDateTo);
-  }, [allReceipts, filterType, filterProcess, filterItem, filterDateFrom, filterDateTo]);
-
-  const formatDate = (timestamp) => {
-    if (!timestamp) return '';
-    try {
-      const date = new Date(timestamp);
-      if (isNaN(date.getTime())) return '';
-      return `${date.getMonth()+1}월 ${date.getDate()}일`;
-    } catch {
-      return '';
-    }
-  };
-
-  const handleDelete = (id, e) => {
-    e.stopPropagation();
-    setDeleteModalTarget(id);
-  };
-
-  const confirmDelete = async () => {
-    if (!deleteModalTarget) return;
-    const id = deleteModalTarget;
-    try {
-      const response = await fetch(`/api/receipts/${id}`, {
-        method: 'DELETE'
-      });
-      if (response.ok) {
-        setAllReceipts(prev => prev.filter(r => r.id !== id));
-      } else {
-        alert('삭제에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error("Delete error:", error);
-      alert('삭제 중 오류가 발생했습니다.');
-    } finally {
-      setDeleteModalTarget(null);
-    }
-  };
+  const hasFilter = Boolean(debouncedQuery || processId || period !== 'all');
 
   return (
-    <div className="page" style={{ padding: 0 }}>
-      {/* Header */}
-      <div className="header" style={{ paddingBottom: 8 }}>
-        <div className="flex items-center gap-4">
-          <ArrowLeft className="header-icon" size={24} onClick={() => navigate('/menu')} />
-          <h1 className="text-xl font-bold">인수증 내역</h1>
+    <div className="page with-nav">
+      <header className="header">
+        <div className="header-left"><h1 className="header-title">인수 내역</h1></div>
+        <div className="header-right">
+          <SiteSwitcher />
         </div>
-        <button className="btn btn-secondary" style={{ padding: '8px', borderRadius: '50%' }} onClick={fetchReceipts}>
-          <Search size={20} />
-        </button>
-      </div>
+      </header>
 
-      {/* Filter Chips */}
-      <div className="filter-container">
-        {['전체', '공정별', '자재별', '일자별'].map(opt => (
-          <button
-            key={opt}
-            className={`filter-chip ${filterType === opt ? 'active' : ''}`}
-            onClick={() => {
-              setFilterType(opt);
-              setFilterProcess('');
-              setFilterItem('');
-              setFilterDateFrom('');
-              setFilterDateTo('');
-            }}
-          >
-            {opt}
-          </button>
-        ))}
-      </div>
-
-      {/* Dynamic Filter Inputs */}
-      <div style={{ padding: '0 20px', marginBottom: '16px' }}>
-        {filterType === '공정별' && (
-          <div className="flex gap-2" style={{ overflowX: 'auto', paddingBottom: '4px' }}>
-            {PROCESS_OPTIONS.map(opt => (
-              <button
-                key={opt}
-                onClick={() => setFilterProcess(opt)}
-                className={`filter-chip ${filterProcess === opt ? 'active' : ''}`}
-                style={{ padding: '6px 12px', fontSize: '0.9rem' }}
-              >
-                {opt}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {filterType === '자재별' && (
-          <input 
-            type="text" 
-            className="form-input" 
-            placeholder="자재명 검색 (예: 철근)" 
-            value={filterItem}
-            onChange={(e) => setFilterItem(e.target.value)}
-            style={{ padding: '12px 16px' }}
+      <div className="filters">
+        <div className="search-box">
+          <Search size={18} />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="자재, 업체, 규격, 차량번호 검색"
+            enterKeyHint="search"
           />
-        )}
+          {query && <button className="icon-btn small" onClick={() => setQuery('')} aria-label="검색어 지우기"><X size={16} /></button>}
+        </div>
 
-        {filterType === '일자별' && (
-          <div className="flex gap-2 items-center" style={{ width: '100%' }}>
-            <input 
-              type="date" 
-              className="form-input" 
-              value={filterDateFrom}
-              onChange={(e) => setFilterDateFrom(e.target.value)}
-              style={{ padding: '12px', flex: 1, minWidth: 0, border: '1px solid #E5E7EB', backgroundColor: '#ffffff' }}
-            />
-            <span className="text-secondary font-bold">~</span>
-            <input 
-              type="date" 
-              className="form-input" 
-              value={filterDateTo}
-              onChange={(e) => setFilterDateTo(e.target.value)}
-              style={{ padding: '12px', flex: 1, minWidth: 0, border: '1px solid #E5E7EB', backgroundColor: '#ffffff' }}
-            />
+        <ChipGroup value={period} onChange={setPeriod} options={PERIODS.map((p) => ({ value: p.key, label: p.label }))} />
+
+        {period === 'custom' && (
+          <div className="date-range">
+            <input type="date" className="input" value={customRange.date_from}
+              onChange={(e) => setCustomRange((r) => ({ ...r, date_from: e.target.value }))} />
+            <span>~</span>
+            <input type="date" className="input" value={customRange.date_to}
+              onChange={(e) => setCustomRange((r) => ({ ...r, date_to: e.target.value }))} />
           </div>
         )}
+
+        <ChipGroup
+          value={processId}
+          onChange={setProcessId}
+          options={[{ value: null, label: '모든 공정' }, ...processes.map((p) => ({ value: p.id, label: p.name, color: p.color }))]}
+        />
       </div>
 
-      {/* List Container */}
-      <div className="card-container" style={{ paddingBottom: 100 }}>
-        <div className="card" style={{ padding: '8px 24px' }}>
-          {loading ? (
-            <div className="text-center mt-6 mb-6 text-secondary font-semibold">내역을 불러오는 중...</div>
-          ) : filteredReceipts.length === 0 ? (
-            <div className="text-center mt-6 mb-6 text-secondary font-semibold">
-              내역이 없습니다.
-            </div>
-          ) : (
-            filteredReceipts.map(receipt => {
-              const { color } = getProcessIcon(receipt.process);
-              return (
-                <div 
-                  key={receipt.id} 
-                  className="list-item"
-                  onClick={() => navigate(`/detail/${receipt.id}`)}
-                >
-                  <div className="flex items-center gap-4 w-full">
-                    
-                    {/* Content (2 lines) */}
-                    <div style={{ flex: 1 }}>
-                      <h3 className="font-bold text-lg" style={{ marginBottom: 2, color: color }}>{receipt.item}</h3>
-                      <p className="text-black" style={{ fontSize: '0.85rem' }}>
-                        {receipt.vendor || '알수없음'} · {formatDate(receipt.createdAt)}
-                      </p>
-                    </div>
-                    
-                    {/* Right Side */}
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-xl text-black">
-                        {receipt.quantity || '-'}
-                        {receipt.weight ? ` / ${receipt.weight}` : ''}
-                      </span>
-                      <button 
-                        style={{ padding: '6px', border: 'none', backgroundColor: 'transparent', color: '#9CA3AF', cursor: 'pointer' }}
-                        onClick={(e) => handleDelete(receipt.id, e)}
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
+      <div className="content">
+        <div className="list-summary">
+          <span>총 <b>{total}</b>건</span>
+          {total > 0 && (
+            <a className="link-btn" href={api.exportUrl(filters)} download>
+              <Download size={16} /> 엑셀(CSV) 받기
+            </a>
           )}
         </div>
+
+        {loading ? (
+          <Spinner />
+        ) : items.length === 0 ? (
+          <EmptyState
+            title={hasFilter ? '조건에 맞는 인수증이 없어요' : '아직 등록된 인수증이 없어요'}
+            description={hasFilter ? '검색어나 필터를 바꿔보세요.' : '촬영 버튼을 눌러 첫 인수증을 등록해보세요.'}
+          />
+        ) : (
+          <>
+            {groups.map(([date, rows]) => (
+              <section key={date} className="date-group">
+                <h4 className="date-group-title">
+                  {formatDateLabel(date)} <span>{rows.length}건</span>
+                </h4>
+                <div className="card list-card">
+                  {rows.map((r) => (
+                    <ReceiptRow key={r.id} receipt={r} onClick={() => navigate(`/receipts/${r.id}`)} />
+                  ))}
+                </div>
+              </section>
+            ))}
+            {items.length < total && (
+              <button className="btn btn-gray btn-block" onClick={loadMore} disabled={loadingMore}>
+                {loadingMore ? '불러오는 중...' : `더 보기 (${total - items.length}건 남음)`}
+              </button>
+            )}
+          </>
+        )}
       </div>
 
-      <button className="fab" onClick={() => navigate('/camera')}>
-        <Camera size={24} />
-      </button>
-
-      {/* Delete Confirmation Modal */}
-      {deleteModalTarget && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '0 20px',
-          backdropFilter: 'blur(2px)'
-        }}>
-          <div style={{
-            backgroundColor: '#fff', borderRadius: '24px', padding: '32px 24px',
-            width: '100%', maxWidth: '340px', textAlign: 'center',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.1)'
-          }}>
-            <div style={{
-              width: '64px', height: '64px', borderRadius: '50%', 
-              backgroundColor: '#FFF0F0', display: 'flex', alignItems: 'center', 
-              justifyContent: 'center', margin: '0 auto 20px'
-            }}>
-              <Trash2 color="#E03131" size={32} />
-            </div>
-            <h2 className="font-bold text-xl mb-2 text-black">인수증 삭제</h2>
-            <p className="text-secondary mb-8" style={{ fontSize: '0.95rem', lineHeight: '1.5' }}>
-              이 인수증을 정말 삭제하시겠습니까?<br/>삭제 후에는 복구할 수 없습니다.
-            </p>
-            <div className="flex gap-3">
-              <button 
-                className="btn btn-secondary" 
-                style={{ flex: 1, padding: '16px', borderRadius: '16px', fontSize: '1rem', fontWeight: 600, border: 'none', backgroundColor: '#F2F4F6', color: '#4E5968' }}
-                onClick={() => setDeleteModalTarget(null)}
-              >
-                취소
-              </button>
-              <button 
-                className="btn btn-primary" 
-                style={{ flex: 1, padding: '16px', borderRadius: '16px', fontSize: '1rem', fontWeight: 600, backgroundColor: '#E03131', border: 'none' }}
-                onClick={confirmDelete}
-              >
-                삭제하기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <BottomNav />
     </div>
   );
 };
