@@ -142,11 +142,19 @@ async def process_receipt_image(file_bytes: bytes, filename: str, content_type: 
     upstage_key = os.environ.get("UPSTAGE_API_KEY")
     openai_key = os.environ.get("OPENAI_API_KEY")
 
-    if upstage_key:
-        raw = await _extract_with_upstage(upstage_key, file_bytes, filename, content_type)
-    elif openai_key:
-        raw = await _extract_with_openai(openai_key, file_bytes, content_type)
-    else:
+    if not (upstage_key or openai_key):
         raise Exception("OCR API 키(UPSTAGE_API_KEY 또는 OPENAI_API_KEY)가 설정되지 않았습니다.")
+
+    raw = None
+    if upstage_key:
+        try:
+            raw = await _extract_with_upstage(upstage_key, file_bytes, filename, content_type)
+        except Exception as e:
+            # 크레딧 소진 등으로 Upstage가 실패하면 OpenAI로 재시도
+            if not openai_key:
+                raise
+            print(f"Upstage failed, falling back to OpenAI: {e}")
+    if raw is None:
+        raw = await _extract_with_openai(openai_key, file_bytes, content_type)
 
     return _normalize(raw), raw
