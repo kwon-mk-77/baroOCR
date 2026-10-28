@@ -9,9 +9,12 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 def _database_url() -> str:
     url = os.environ.get("DATABASE_URL", "").strip()
     if url:
-        # Supabase/Heroku 스타일 URL 보정
-        if url.startswith("postgres://"):
-            url = "postgresql://" + url[len("postgres://"):]
+        # Supabase/Heroku 스타일 URL 보정 + 드라이버 명시
+        # (SQLAlchemy 2.1부터 postgresql:// 기본 드라이버가 psycopg(v3)로 바뀌어, 설치된 psycopg2를 지정)
+        for prefix in ("postgres://", "postgresql://"):
+            if url.startswith(prefix):
+                url = "postgresql+psycopg2://" + url[len(prefix):]
+                break
         return url
 
     # DATABASE_URL이 없으면 SQLite 파일 사용 (로컬 개발용)
